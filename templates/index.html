@@ -35,7 +35,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, 1fr);
             gap: 12px;
             margin-bottom: 20px;
         }
@@ -138,6 +138,26 @@
             <div id="uptime" class="value">-</div>
         </div>
 
+        <div class="card">
+            <div class="label">MODEL</div>
+            <div id="model" class="value">-</div>
+        </div>
+
+        <div class="card">
+            <div class="label">GUILDS</div>
+            <div id="guilds" class="value">-</div>
+        </div>
+
+        <div class="card">
+            <div class="label">DISCORD LATENCY</div>
+            <div id="latency" class="value">-</div>
+        </div>
+
+        <div class="card">
+            <div class="label">CPU</div>
+            <div id="cpu" class="value">-</div>
+        </div>
+
     </div>
 
     <div class="actions">
@@ -148,6 +168,9 @@
 
     <h3>Recent Logs</h3>
     <pre id="logs">Loading...</pre>
+
+    <h3>Discord / AI Events</h3>
+    <pre id="events">Loading...</pre>
 
 </div>
 
@@ -185,8 +208,32 @@ async function loadStatus() {
         document.getElementById("uptime").textContent =
             uptime(data.uptime_seconds);
 
+        const runtime = data.runtime || {};
+        document.getElementById("model").textContent =
+            runtime.model ? `${runtime.provider} / ${runtime.model}` : "-";
+        document.getElementById("guilds").textContent =
+            runtime.guild_count ?? "-";
+        document.getElementById("latency").textContent =
+            runtime.latency_ms != null ? `${runtime.latency_ms} ms` : "-";
+        document.getElementById("cpu").textContent =
+            data.cpu_percent != null ? `${data.cpu_percent}%` : "-";
+
     } catch (e) {
         document.getElementById("status").textContent = "ERROR";
+    }
+}
+
+async function loadEvents() {
+    try {
+        const res = await fetch("/api/events?lines=100");
+        const data = await res.json();
+        const values = (data.events || []).map((event) => {
+            const { at, event: name, ...details } = event;
+            return `${at || ""} ${name || "event"} ${JSON.stringify(details)}`;
+        });
+        document.getElementById("events").textContent = values.join("\n") || "No events yet";
+    } catch (e) {
+        document.getElementById("events").textContent = "Failed to load events";
     }
 }
 
@@ -228,8 +275,10 @@ async function action(name) {
 
 loadStatus();
 loadLogs();
+loadEvents();
 
 setInterval(loadStatus, 5000);
+setInterval(loadEvents, 5000);
 
 const logBox = document.getElementById("logs");
 const logSource = new EventSource("/api/logs/stream");

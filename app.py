@@ -67,6 +67,12 @@ async def logs(lines: int = 50):
     return await agent_get(f"/logs?lines={lines}")
 
 
+@app.get("/api/events")
+async def events(lines: int = 50):
+    lines = max(1, min(lines, 500))
+    return await agent_get(f"/events?lines={lines}")
+
+
 @app.post("/api/bot/start")
 async def bot_start():
     return await agent_post("/bot/start")
@@ -80,27 +86,6 @@ async def bot_stop():
 @app.post("/api/bot/restart")
 async def bot_restart():
     return await agent_post("/bot/restart")
-
-from fastapi.responses import StreamingResponse
-
-
-@app.get("/api/logs/stream")
-async def logs_stream():
-    async def proxy():
-        async with httpx.AsyncClient(timeout=None) as client:
-            async with client.stream(
-                "GET",
-                f"{AGENT_URL}/logs/stream",
-                headers=HEADERS
-            ) as response:
-                async for chunk in response.aiter_bytes():
-                    yield chunk
-
-    return StreamingResponse(
-        proxy(),
-        media_type="text/event-stream"
-    )
-
 
 @app.get("/api/logs/stream")
 async def console_logs_stream():

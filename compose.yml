@@ -1,0 +1,13 @@
+services:
+  rio-console:
+    build: .
+    container_name: rio-console
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - deepria-web
+
+networks:
+  deepria-web:
+    external: true

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rio Control Center</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #0b0d10;
+            color: #e8eaed;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .wrap {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        .sub {
+            color: #8b949e;
+            margin-bottom: 28px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: #15181d;
+            border: 1px solid #272b33;
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .label {
+            color: #8b949e;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .online {
+            color: #3fb950;
+        }
+
+        .offline {
+            color: #f85149;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #21262d;
+            color: #e8eaed;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #30363d;
+        }
+
+        button.danger {
+            border-color: #da3633;
+        }
+
+        pre {
+            background: #0d1117;
+            border: 1px solid #272b33;
+            border-radius: 12px;
+            padding: 16px;
+            height: 420px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 700px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrap">
+
+    <h1>RIO CONTROL CENTER</h1>
+    <div class="sub">Discord Bot Operations Console</div>
+
+    <div class="grid">
+
+        <div class="card">
+            <div class="label">STATUS</div>
+            <div id="status" class="value">...</div>
+        </div>
+
+        <div class="card">
+            <div class="label">PID</div>
+            <div id="pid" class="value">-</div>
+        </div>
+
+        <div class="card">
+            <div class="label">MEMORY</div>
+            <div id="memory" class="value">-</div>
+        </div>
+
+        <div class="card">
+            <div class="label">UPTIME</div>
+            <div id="uptime" class="value">-</div>
+        </div>
+
+    </div>
+
+    <div class="actions">
+        <button onclick="action('start')">Start</button>
+        <button onclick="action('restart')">Restart</button>
+        <button class="danger" onclick="action('stop')">Stop</button>
+    </div>
+
+    <h3>Recent Logs</h3>
+    <pre id="logs">Loading...</pre>
+
+</div>
+
+<script>
+
+function uptime(seconds) {
+    if (seconds == null) return "-";
+
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+
+    return `${d}d ${h}h ${m}m`;
+}
+
+async function loadStatus() {
+    try {
+        const res = await fetch("/api/status");
+        const data = await res.json();
+
+        const status = document.getElementById("status");
+
+        if (data.online) {
+            status.textContent = "● ONLINE";
+            status.className = "value online";
+        } else {
+            status.textContent = "● OFFLINE";
+            status.className = "value offline";
+        }
+
+        document.getElementById("pid").textContent = data.pid ?? "-";
+        document.getElementById("memory").textContent =
+            data.memory_mb != null ? `${data.memory_mb} MB` : "-";
+
+        document.getElementById("uptime").textContent =
+            uptime(data.uptime_seconds);
+
+    } catch (e) {
+        document.getElementById("status").textContent = "ERROR";
+    }
+}
+
+async function loadLogs() {
+    try {
+        const res = await fetch("/api/logs?lines=100");
+        const data = await res.json();
+
+        document.getElementById("logs").textContent =
+            data.logs.join("\n");
+
+    } catch (e) {
+        document.getElementById("logs").textContent =
+            "Failed to load logs";
+    }
+}
+
+async function action(name) {
+    if (name === "stop") {
+        if (!confirm("Rio bot을 중지할까?")) {
+            return;
+        }
+    }
+
+    const res = await fetch(`/api/bot/${name}`, {
+        method: "POST"
+    });
+
+    if (!res.ok) {
+        alert("작업 실패");
+        return;
+    }
+
+    setTimeout(() => {
+        loadStatus();
+        loadLogs();
+    }, 1000);
+}
+
+loadStatus();
+loadLogs();
+
+setInterval(loadStatus, 5000);
+
+const logBox = document.getElementById("logs");
+const logSource = new EventSource("/api/logs/stream");
+
+logSource.onmessage = (event) => {
+    logBox.textContent += event.data + "\n";
+    logBox.scrollTop = logBox.scrollHeight;
+};
+
+logSource.onerror = () => {
+    console.error("Rio log stream disconnected");
+};
+
+</script>
+
+</body>
+</html>

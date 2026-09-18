@@ -8,7 +8,7 @@
   width: clamp(360px, 36vw, 620px);
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 0 solid var(--line);
   color: var(--ink);
   background:
     linear-gradient(135deg, rgba(var(--accent-rgb), 0.11), transparent 28%),

@@ -92,8 +92,12 @@ async def index(request: Request):
 
 
 @app.get("/api/status")
-async def status():
-    return await agent_get("/status")
+async def status(include_events: bool = False, event_lines: int = 100):
+    payload = await agent_get("/status")
+    if include_events:
+        event_lines = max(1, min(event_lines, 500))
+        payload["events"] = (await agent_get(f"/events?lines={event_lines}")).get("events", [])
+    return payload
 
 
 @app.get("/api/logs")

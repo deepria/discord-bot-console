@@ -1,22 +1,22 @@
 @keyframes rio-idle {
   0%,
   100% {
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateY(0) scale(1);
   }
   50% {
-    transform: translateX(-50%) translateY(-0.45%) scale(1.002);
+    transform: translateY(-0.45%) scale(1.002);
   }
 }
 
 @keyframes rio-alert {
   0% {
-    transform: translateX(-50%) scale(1);
+    transform: scale(1);
   }
   38% {
-    transform: translateX(-50%) translateY(-0.8%) scale(1.012);
+    transform: translateY(-0.8%) scale(1.012);
   }
   100% {
-    transform: translateX(-50%) scale(1);
+    transform: scale(1);
   }
 }
 
@@ -31,6 +31,29 @@
 .panel-slide-leave-to {
   opacity: 0;
   transform: translateX(28px);
+}
+
+.rio-expression-enter-active,
+.rio-expression-leave-active {
+  transition: opacity 120ms ease;
+}
+
+.rio-expression-enter-from,
+.rio-expression-leave-to {
+  opacity: 0;
+}
+
+.rio-dialogue-enter-active,
+.rio-dialogue-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rio-dialogue-enter-from,
+.rio-dialogue-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
 }
 
 @media (max-width: 760px) {

@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import {
+  rioDialogues,
+  rioExpressions,
+  type RioDialogue,
+} from "../../data/rio-dialogues";
 import type { MonitorId, MonitorStatus, SceneState } from "../../types/api";
 import MonitorHotspot from "./MonitorHotspot.vue";
 import RioBriefing from "./RioBriefing.vue";
@@ -14,11 +19,16 @@ const props = defineProps<{
   detail: string;
 }>();
 
-defineEmits<{ select: [id: MonitorId] }>();
+const emit = defineEmits<{
+  select: [id: MonitorId];
+  dismissPanel: [];
+}>();
 
 const root = ref<HTMLElement | null>(null);
 const time = ref("--:--:-- KST");
 let clockTimer: number | undefined;
+const dialogueOpen = ref(false);
+const dialogueIndex = ref(0);
 
 const positions: Record<
   MonitorId,
@@ -34,6 +44,16 @@ const positions: Record<
 };
 
 const linkLabel = computed(() => props.monitors.link.summary);
+const currentDialogue = computed<RioDialogue>(() => {
+  if (dialogueIndex.value === 0) {
+    return {
+      image: rioExpressions[0],
+      message: props.message,
+      detail: props.detail,
+    };
+  }
+  return rioDialogues[dialogueIndex.value - 1];
+});
 
 function updateClock(): void {
   time.value =
@@ -50,7 +70,39 @@ function focusMonitor(id: MonitorId): void {
   root.value?.querySelector<HTMLElement>(`[data-monitor="${id}"]`)?.focus();
 }
 
-defineExpose({ focusMonitor });
+function closeDialogue(): void {
+  dialogueOpen.value = false;
+}
+
+function advanceDialogue(): void {
+  dialogueIndex.value = (dialogueIndex.value + 1) % rioExpressions.length;
+}
+
+function interactWithRio(): void {
+  if (!dialogueOpen.value) {
+    dialogueIndex.value = 0;
+    dialogueOpen.value = true;
+    emit("dismissPanel");
+    return;
+  }
+  advanceDialogue();
+}
+
+function selectMonitor(id: MonitorId): void {
+  closeDialogue();
+  emit("select", id);
+}
+
+function dismissFromBackground(event: MouseEvent): void {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  if (target.closest("button, a, input, select, textarea, [role='dialog']"))
+    return;
+  closeDialogue();
+  emit("dismissPanel");
+}
+
+defineExpose({ focusMonitor, closeDialogue });
 
 onMounted(() => {
   updateClock();
@@ -67,7 +119,7 @@ onUnmounted(() => window.clearInterval(clockTimer));
     :data-scene="scene"
     aria-label="Rio Operations Room"
   >
-    <div class="office-stage">
+    <div class="office-stage" @click="dismissFromBackground">
       <SceneLayers :scene="scene" />
       <div class="scene-shade" aria-hidden="true"></div>
       <header class="scene-hud">
@@ -87,11 +139,27 @@ onUnmounted(() => window.clearInterval(clockTimer));
           :monitor="monitors[id]"
           :selected="selected === id"
           v-bind="position"
-          @select="$emit('select', $event)"
+          @select="selectMonitor"
         />
       </nav>
-      <RioCharacter :scene="scene" />
-      <RioBriefing :message="message" :detail="detail" />
+      <RioCharacter
+        :scene="scene"
+        :expression="currentDialogue.image"
+        :dialogue-open="dialogueOpen"
+        @interact="interactWithRio"
+      />
+      <Transition name="rio-dialogue">
+        <RioBriefing
+          v-if="dialogueOpen"
+          :message="currentDialogue.message"
+          :detail="currentDialogue.detail"
+          @next="advanceDialogue"
+          @close="closeDialogue"
+        />
+      </Transition>
+      <div class="rio-expression-preload" aria-hidden="true">
+        <img v-for="image in rioExpressions" :key="image" :src="image" alt="" />
+      </div>
     </div>
   </section>
 </template>

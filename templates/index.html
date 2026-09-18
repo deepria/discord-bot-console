@@ -1,378 +1,705 @@
 <!doctype html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rio Control Center</title>
-
     <style>
-        * {
-            box-sizing: border-box;
+      :root {
+        --ink: #e9f8ff;
+        --muted: #8ba9ba;
+        --panel: rgba(5, 20, 35, 0.78);
+        --panel-strong: rgba(4, 15, 29, 0.92);
+        --line: rgba(94, 215, 255, 0.28);
+        --primary: #31cfff;
+        --primary-rgb: 49, 207, 255;
+        --scene-a: #061829;
+        --scene-b: #092e52;
+        --alert: #fa75ff;
+      }
+      body[data-scene="alert"] {
+        --ink: #fff0ff;
+        --muted: #c8a0cd;
+        --panel: rgba(30, 8, 39, 0.8);
+        --panel-strong: rgba(24, 5, 33, 0.93);
+        --line: rgba(255, 113, 240, 0.34);
+        --primary: #ed68ff;
+        --primary-rgb: 237, 104, 255;
+        --scene-a: #210c31;
+        --scene-b: #59195e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        overflow-x: hidden;
+        background: var(--scene-a);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        transition:
+          background-color 0.45s ease,
+          color 0.45s ease;
+      }
+      .scene {
+        position: fixed;
+        z-index: -1;
+        inset: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            ellipse 80% 40% at 50% 15%,
+            rgba(var(--primary-rgb), 0.23),
+            transparent 68%
+          ),
+          linear-gradient(150deg, var(--scene-a), var(--scene-b));
+        transition: background 0.45s ease;
+      }
+      .scene::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.72;
+        background-image:
+          linear-gradient(rgba(var(--primary-rgb), 0.06) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            rgba(var(--primary-rgb), 0.06) 1px,
+            transparent 1px
+          );
+        background-size: 38px 38px;
+        mask-image: linear-gradient(to bottom, black, transparent 78%);
+      }
+      .ceiling-light,
+      .horizon-light {
+        position: absolute;
+        left: 8%;
+        width: 84%;
+        height: 4px;
+        background: var(--primary);
+        box-shadow:
+          0 0 8px var(--primary),
+          0 0 30px rgba(var(--primary-rgb), 0.8);
+        transition:
+          background 0.45s ease,
+          box-shadow 0.45s ease;
+      }
+      .ceiling-light {
+        top: 7%;
+      }
+      .horizon-light {
+        top: 38%;
+        opacity: 0.65;
+      }
+      .monitor-wall {
+        position: absolute;
+        top: 13%;
+        left: 50%;
+        width: min(1080px, 110vw);
+        height: 260px;
+        transform: translateX(-50%) perspective(500px) rotateX(8deg);
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        grid-auto-rows: 52px;
+        gap: 7px;
+        opacity: 0.72;
+      }
+      .monitor-wall span {
+        border: 1px solid rgba(var(--primary-rgb), 0.58);
+        background:
+          linear-gradient(
+            135deg,
+            transparent 40%,
+            rgba(var(--primary-rgb), 0.18)
+          ),
+          repeating-linear-gradient(
+            90deg,
+            rgba(var(--primary-rgb), 0.16) 0 9%,
+            transparent 9% 12%
+          );
+        box-shadow:
+          inset 0 0 14px rgba(var(--primary-rgb), 0.23),
+          0 0 10px rgba(var(--primary-rgb), 0.14);
+      }
+      .monitor-wall span:nth-child(3n) {
+        opacity: 0.55;
+      }
+      .monitor-wall span:nth-child(5n) {
+        background-color: rgba(var(--primary-rgb), 0.18);
+      }
+      .floor {
+        position: absolute;
+        top: 46%;
+        left: -20%;
+        width: 140%;
+        height: 65%;
+        background-image:
+          linear-gradient(rgba(var(--primary-rgb), 0.13) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            rgba(var(--primary-rgb), 0.13) 1px,
+            transparent 1px
+          );
+        background-size: 70px 45px;
+        transform: perspective(320px) rotateX(62deg);
+        transform-origin: top;
+        opacity: 0.45;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 30px 22px 58px;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+      }
+      .brand {
+        letter-spacing: 0.16em;
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--primary);
+      }
+      h1 {
+        margin: 7px 0 0;
+        font-size: clamp(25px, 4vw, 42px);
+        letter-spacing: -0.04em;
+      }
+      .scene-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.18);
+        color: var(--primary);
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+      .pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 12px currentColor;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 16px;
+        margin: 38px 0 18px;
+      }
+      .hero-copy,
+      .rio-terminal,
+      .card,
+      .terminal {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        box-shadow:
+          0 18px 45px rgba(0, 0, 0, 0.24),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+      .hero-copy {
+        min-height: 205px;
+        padding: 27px;
+        position: relative;
+        overflow: hidden;
+      }
+      .hero-copy::after {
+        content: "RIO";
+        position: absolute;
+        right: -9px;
+        bottom: -27px;
+        color: rgba(var(--primary-rgb), 0.08);
+        font-size: 128px;
+        font-weight: 900;
+        letter-spacing: -0.12em;
+      }
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+      }
+      .hero-message {
+        position: relative;
+        margin: 0;
+        max-width: 560px;
+        font-size: clamp(20px, 3vw, 29px);
+        font-weight: 750;
+        line-height: 1.3;
+      }
+      .hero-detail {
+        position: relative;
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .rio-terminal {
+        position: relative;
+        min-height: 205px;
+        padding: 24px;
+        overflow: hidden;
+      }
+      .rio-terminal::before {
+        content: "";
+        position: absolute;
+        width: 210px;
+        height: 210px;
+        right: -38px;
+        bottom: -76px;
+        border: 1px solid var(--primary);
+        border-radius: 50%;
+        box-shadow: 0 0 80px rgba(var(--primary-rgb), 0.3);
+      }
+      .terminal-title {
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+      }
+      .terminal-avatar {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 82px;
+        height: 82px;
+        margin-top: 21px;
+        border: 1px solid var(--primary);
+        border-radius: 50%;
+        color: var(--primary);
+        font-size: 30px;
+        font-weight: 800;
+        box-shadow: 0 0 25px rgba(var(--primary-rgb), 0.3);
+      }
+      .terminal-avatar::after {
+        content: "RIO";
+        position: absolute;
+        top: 96px;
+        font-size: 12px;
+        letter-spacing: 0.2em;
+      }
+      .terminal-readout {
+        position: absolute;
+        right: 23px;
+        bottom: 23px;
+        color: var(--primary);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        line-height: 1.7;
+        text-align: right;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 11px;
+        margin-bottom: 15px;
+      }
+      .card {
+        min-height: 101px;
+        padding: 17px;
+        transition:
+          border-color 0.45s ease,
+          background 0.45s ease;
+      }
+      .label {
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        font-weight: 800;
+      }
+      .value {
+        margin-top: 10px;
+        font-size: clamp(18px, 2.1vw, 25px);
+        font-weight: 750;
+        overflow-wrap: anywhere;
+      }
+      .online {
+        color: var(--primary);
+      }
+      .offline {
+        color: var(--alert);
+      }
+      .actions {
+        display: flex;
+        gap: 9px;
+        margin: 18px 0 28px;
+      }
+      button {
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 10px 16px;
+        color: var(--ink);
+        background: var(--panel-strong);
+        cursor: pointer;
+        font-weight: 700;
+      }
+      button:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+      button.danger {
+        border-color: rgba(255, 110, 170, 0.55);
+      }
+      .section-heading {
+        margin: 26px 0 9px;
+        color: var(--primary);
+        font-size: 12px;
+        letter-spacing: 0.15em;
+      }
+      .terminal {
+        margin: 0;
+        min-height: 150px;
+        max-height: 370px;
+        padding: 15px;
+        overflow: auto;
+        color: #c1d6e0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font:
+          12px/1.65 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      @media (max-width: 720px) {
+        .hero {
+          grid-template-columns: 1fr;
+          margin-top: 24px;
         }
-
-        body {
-            margin: 0;
-            background: #0b0d10;
-            color: #e8eaed;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-
-        .wrap {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        h1 {
-            margin: 0 0 8px;
-            font-size: 28px;
-        }
-
-        .sub {
-            color: #8b949e;
-            margin-bottom: 28px;
-        }
-
         .grid {
-            display: grid;
-        grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
+          grid-template-columns: repeat(2, 1fr);
         }
-
+        .rio-terminal {
+          min-height: 162px;
+        }
+      }
+      @media (max-width: 440px) {
+        .wrap {
+          padding-inline: 14px;
+        }
+        .topbar {
+          align-items: flex-start;
+        }
+        .scene-indicator {
+          font-size: 10px;
+        }
+        .grid {
+          gap: 8px;
+        }
         .card {
-            background: #15181d;
-            border: 1px solid #272b33;
-            border-radius: 12px;
-            padding: 18px;
+          padding: 13px;
         }
-
-        .label {
-            color: #8b949e;
-            font-size: 13px;
-            margin-bottom: 8px;
+        .actions button {
+          padding: 9px 11px;
         }
-
-        .value {
-            font-size: 22px;
-            font-weight: 700;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
         }
-
-        .online {
-            color: #3fb950;
-        }
-
-        .offline {
-            color: #f85149;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        button {
-            background: #21262d;
-            color: #e8eaed;
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 10px 18px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #30363d;
-        }
-
-        button.danger {
-            border-color: #da3633;
-        }
-
-        pre {
-            background: #0d1117;
-            border: 1px solid #272b33;
-            border-radius: 12px;
-            padding: 16px;
-            height: 420px;
-            overflow: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        @media (max-width: 700px) {
-            .grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
+      }
     </style>
-</head>
-<body>
-
-<div class="wrap">
-
-    <h1>RIO CONTROL CENTER</h1>
-    <div class="sub">Discord Bot Operations Console</div>
-
-    <div class="grid">
-
-        <div class="card">
-            <div class="label">STATUS</div>
-            <div id="status" class="value">...</div>
-        </div>
-
-        <div class="card">
-            <div class="label">PID</div>
-            <div id="pid" class="value">-</div>
-        </div>
-
-        <div class="card">
-            <div class="label">MEMORY</div>
-            <div id="memory" class="value">-</div>
-        </div>
-
-        <div class="card">
-            <div class="label">UPTIME</div>
-            <div id="uptime" class="value">-</div>
-        </div>
-
-        <div class="card">
-            <div class="label">MODEL</div>
-            <div id="model" class="value">-</div>
-        </div>
-
-        <div class="card">
-            <div class="label">GUILDS</div>
-            <div id="guilds" class="value">-</div>
-        </div>
-
-        <div class="card">
-            <div class="label">DISCORD LATENCY</div>
-            <div id="latency" class="value">-</div>
-        </div>
-
-        <div class="card">
-            <div class="label">CPU</div>
-            <div id="cpu" class="value">-</div>
-        </div>
-
-        <div class="card">
-            <div class="label">DATA LINK</div>
-            <div id="connection" class="value">...</div>
-        </div>
-
+  </head>
+  <body data-scene="loading">
+    <div class="scene" aria-hidden="true">
+      <div class="ceiling-light"></div>
+      <div class="monitor-wall">
+        <span></span><span></span><span></span><span></span><span></span
+        ><span></span><span></span><span></span><span></span><span></span
+        ><span></span><span></span><span></span><span></span><span></span
+        ><span></span><span></span><span></span><span></span><span></span
+        ><span></span><span></span><span></span><span></span><span></span
+        ><span></span><span></span><span></span><span></span><span></span
+        ><span></span><span></span>
+      </div>
+      <div class="horizon-light"></div>
+      <div class="floor"></div>
     </div>
-
-    <div class="actions">
-        <button onclick="action('start')">Start</button>
-        <button onclick="action('restart')">Restart</button>
-        <button class="danger" onclick="action('stop')">Stop</button>
-    </div>
-
-    <h3>Recent Logs</h3>
-    <pre id="logs">Loading...</pre>
-
-    <h3>Discord / AI Events</h3>
-    <pre id="events">Loading...</pre>
-
-    <h3>Deployments</h3>
-    <pre id="deployments">Loading...</pre>
-
-</div>
-
-<script>
-
-let lastStatus = null;
-let lastEvents = [];
-
-function uptime(seconds) {
-    if (seconds == null) return "-";
-
-    const d = Math.floor(seconds / 86400);
-    const h = Math.floor((seconds % 86400) / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-
-    return `${d}d ${h}h ${m}m`;
-}
-
-async function loadStatus() {
-    try {
-        const res = await fetch("/api/status", {cache: "no-store"});
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        lastStatus = data;
-        renderStatus(data, false);
-        renderStatusEvents(data);
-    } catch (e) {
-        if (lastStatus) {
-            renderStatus(lastStatus, true);
-        } else {
-            document.getElementById("status").textContent = "● UNAVAILABLE";
-            document.getElementById("status").className = "value offline";
+    <main class="wrap">
+      <header class="topbar">
+        <div>
+          <div class="brand">RIO // OPERATIONS</div>
+          <h1>Control Center</h1>
+        </div>
+        <div class="scene-indicator">
+          <span class="pulse"></span><span id="scene-label">CONNECTING</span>
+        </div>
+      </header>
+      <section class="hero" aria-live="polite">
+        <div class="hero-copy">
+          <p class="eyebrow">RIO OFFICE // LIVE SYSTEM</p>
+          <p class="hero-message" id="hero-message">
+            리오가 시스템 상태를 확인하고 있습니다.
+          </p>
+          <p class="hero-detail" id="hero-detail">
+            CT 101 bot · CT 102 console
+          </p>
+        </div>
+        <div class="rio-terminal">
+          <div class="terminal-title">RIO ASSISTANT // STATUS LINK</div>
+          <div class="terminal-avatar">R</div>
+          <div class="terminal-readout" id="terminal-readout">
+            AWAITING SIGNAL<br />STATUS: --
+          </div>
+        </div>
+      </section>
+      <section class="grid">
+        <div class="card">
+          <div class="label">STATUS</div>
+          <div id="status" class="value">...</div>
+        </div>
+        <div class="card">
+          <div class="label">DATA LINK</div>
+          <div id="connection" class="value">...</div>
+        </div>
+        <div class="card">
+          <div class="label">MODEL</div>
+          <div id="model" class="value">-</div>
+        </div>
+        <div class="card">
+          <div class="label">GUILDS</div>
+          <div id="guilds" class="value">-</div>
+        </div>
+        <div class="card">
+          <div class="label">DISCORD LATENCY</div>
+          <div id="latency" class="value">-</div>
+        </div>
+        <div class="card">
+          <div class="label">UPTIME</div>
+          <div id="uptime" class="value">-</div>
+        </div>
+        <div class="card">
+          <div class="label">PID</div>
+          <div id="pid" class="value">-</div>
+        </div>
+        <div class="card">
+          <div class="label">MEMORY</div>
+          <div id="memory" class="value">-</div>
+        </div>
+        <div class="card">
+          <div class="label">CPU</div>
+          <div id="cpu" class="value">-</div>
+        </div>
+      </section>
+      <div class="actions">
+        <button onclick="action('start')">Start</button
+        ><button onclick="action('restart')">Restart</button
+        ><button class="danger" onclick="action('stop')">Stop</button>
+      </div>
+      <h2 class="section-heading">RECENT LOGS</h2>
+      <pre class="terminal" id="logs">Loading...</pre>
+      <h2 class="section-heading">DISCORD / AI EVENTS</h2>
+      <pre class="terminal" id="events">Loading...</pre>
+      <h2 class="section-heading">DEPLOYMENTS</h2>
+      <pre class="terminal" id="deployments">Loading...</pre>
+    </main>
+    <script>
+      let lastStatus = null;
+      function setScene(state, reason = "") {
+        document.body.dataset.scene = state;
+        const alert = state === "alert";
+        document.getElementById("scene-label").textContent = alert
+          ? "ATTENTION REQUIRED"
+          : state === "healthy"
+            ? "ALL SYSTEMS NORMAL"
+            : "CONNECTING";
+        document.getElementById("hero-message").textContent = alert
+          ? "리오가 확인이 필요한 상태를 감지했습니다."
+          : state === "healthy"
+            ? "리오의 관제실은 모든 시스템을 정상 감시 중입니다."
+            : "리오가 시스템 상태를 확인하고 있습니다.";
+        document.getElementById("hero-detail").textContent =
+          reason ||
+          (alert
+            ? "상태 카드와 최근 로그를 확인해 주세요."
+            : "CT 101 bot · CT 102 console");
+        document.getElementById("terminal-readout").innerHTML =
+          `${alert ? "ALERT SIGNAL DETECTED" : state === "healthy" ? "SYSTEMS NOMINAL" : "AWAITING SIGNAL"}<br>STATUS: ${state.toUpperCase()}`;
+      }
+      function uptime(seconds) {
+        if (seconds == null) return "-";
+        const d = Math.floor(seconds / 86400),
+          h = Math.floor((seconds % 86400) / 3600),
+          m = Math.floor((seconds % 3600) / 60);
+        return `${d}d ${h}h ${m}m`;
+      }
+      function formatKst(value) {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return new Intl.DateTimeFormat("ko-KR", {
+          timeZone: "Asia/Seoul",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }).format(date);
+      }
+      function setValue(id, value, state = "") {
+        const node = document.getElementById(id);
+        node.textContent = value;
+        node.className = `value ${state}`;
+      }
+      function renderStatus(data, stale) {
+        const alert = stale || !data.online;
+        setScene(
+          alert ? "alert" : "healthy",
+          stale
+            ? "에이전트의 최신 응답을 받지 못해 마지막 정상 상태를 표시합니다."
+            : !data.online
+              ? "봇 서비스가 오프라인입니다. 서비스와 에이전트 연결을 확인해 주세요."
+              : "CT 101 bot · CT 102 console · agent link connected",
+        );
+        setValue(
+          "status",
+          data.online ? (stale ? "● STALE" : "● ONLINE") : "● OFFLINE",
+          alert ? "offline" : "online",
+        );
+        setValue(
+          "connection",
+          stale ? "STALE" : "CONNECTED",
+          stale ? "offline" : "online",
+        );
+        setValue("pid", data.pid ?? "-");
+        setValue(
+          "memory",
+          data.memory_mb != null ? `${data.memory_mb} MB` : "-",
+        );
+        setValue("uptime", uptime(data.uptime_seconds));
+        const runtime = data.runtime || {};
+        setValue(
+          "model",
+          runtime.model ? `${runtime.provider} / ${runtime.model}` : "-",
+        );
+        setValue("guilds", runtime.guild_count ?? "-");
+        setValue(
+          "latency",
+          runtime.latency_ms != null ? `${runtime.latency_ms} ms` : "-",
+        );
+        setValue(
+          "cpu",
+          data.cpu_percent != null ? `${data.cpu_percent}%` : "-",
+        );
+        renderEvents(data.events || [], data.events_error);
+      }
+      function renderEvents(events, error) {
+        document.getElementById("events").textContent = error
+          ? `Latest event request failed: ${error}`
+          : events
+              .map(
+                ({ at, event, ...details }) =>
+                  `${formatKst(at)} ${event || "event"} ${JSON.stringify(details)}`,
+              )
+              .join("\n") || "No events yet";
+      }
+      async function loadStatus() {
+        try {
+          const res = await fetch("/api/status", { cache: "no-store" });
+          if (!res.ok) throw new Error(await res.text());
+          const data = await res.json();
+          lastStatus = data;
+          renderStatus(data, false);
+        } catch (e) {
+          if (lastStatus) renderStatus(lastStatus, true);
+          else {
+            setScene(
+              "alert",
+              "상태 API에 연결할 수 없습니다. 에이전트 연결을 확인해 주세요.",
+            );
+            setValue("status", "● UNAVAILABLE", "offline");
+            setValue("connection", "DEGRADED", "offline");
+          }
         }
-        document.getElementById("connection").textContent = "DEGRADED";
-        document.getElementById("connection").className = "value offline";
-    }
-}
-
-function renderStatus(data, stale) {
-    const status = document.getElementById("status");
-
-    if (data.online) {
-        status.textContent = stale ? "● STALE" : "● ONLINE";
-        status.className = stale ? "value offline" : "value online";
-    } else {
-        status.textContent = "● OFFLINE";
-        status.className = "value offline";
-    }
-
-    document.getElementById("pid").textContent = data.pid ?? "-";
-    document.getElementById("memory").textContent =
-        data.memory_mb != null ? `${data.memory_mb} MB` : "-";
-
-    document.getElementById("uptime").textContent = uptime(data.uptime_seconds);
-
-    const runtime = data.runtime || {};
-    document.getElementById("model").textContent =
-        runtime.model ? `${runtime.provider} / ${runtime.model}` : "-";
-    document.getElementById("guilds").textContent = runtime.guild_count ?? "-";
-    document.getElementById("latency").textContent =
-        runtime.latency_ms != null ? `${runtime.latency_ms} ms` : "-";
-    document.getElementById("cpu").textContent =
-        data.cpu_percent != null ? `${data.cpu_percent}%` : "-";
-    document.getElementById("connection").textContent = stale ? "STALE" : "CONNECTED";
-    document.getElementById("connection").className = stale ? "value offline" : "value online";
-}
-
-function renderStatusEvents(data) {
-    if (data.events_error) {
-        document.getElementById("events").textContent = `Latest event request failed: ${data.events_error}`;
-        return;
-    }
-    lastEvents = data.events || [];
-    renderEvents(lastEvents);
-}
-
-function eventLines(events) {
-    return events.map((event) => {
-        const { at, event: name, ...details } = event;
-        return `${formatKst(at)} ${name || "event"} ${JSON.stringify(details)}`;
-    });
-}
-
-function renderEvents(events) {
-    document.getElementById("events").textContent = eventLines(events).join("\n") || "No events yet";
-}
-
-function formatKst(value) {
-    if (!value) return "";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat("ko-KR", {
-        timeZone: "Asia/Seoul",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-    }).format(date);
-}
-
-async function loadLogs() {
-    try {
-        const res = await fetch("/api/logs?lines=100", {cache: "no-store"});
-        const data = await res.json();
-
-        document.getElementById("logs").textContent =
-            data.logs.join("\n");
-
-    } catch (e) {
-        document.getElementById("logs").textContent =
-            "Failed to load logs";
-    }
-}
-
-function deploymentLine(item) {
-    if (item.available === false) {
-        return `[${item.component}] ${item.detail}`;
-    }
-    if (item.component === "console") {
-        return [
+      }
+      async function loadLogs() {
+        try {
+          const res = await fetch("/api/logs?lines=100", { cache: "no-store" });
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          document.getElementById("logs").textContent = data.logs.join("\n");
+        } catch {
+          document.getElementById("logs").textContent = "Failed to load logs";
+        }
+      }
+      function deploymentLine(item) {
+        if (item.available === false)
+          return `[${item.component}] ${item.detail}`;
+        if (item.component === "console")
+          return [
             `[CONSOLE] revision ${item.revision || "unknown"}`,
             `  deploy: ${item.state || "unknown"}, last=${formatKst(item.at) || "-"}`,
             `  detail: ${item.detail || "-"}`,
             `  last successful: ${formatKst(item.last_success_at) || "-"}`,
+          ].join("\n");
+        const service = item.service || {},
+          timer = item.timer || {};
+        return [
+          `[${String(item.component || "unknown").toUpperCase()}] revision ${item.revision || "unknown"}`,
+          `  deploy: ${service.ActiveState || "unknown"}/${service.Result || "unknown"}, exit=${service.ExecMainStatus || "-"}, last=${service.ExecMainExitTimestamp || "-"}`,
+          `  timer: ${timer.ActiveState || "unknown"}, next=${timer.NextElapseUSecRealtime || "-"}, last=${timer.LastTriggerUSec || "-"}`,
+          `  update available: ${item.update_available ? "yes" : "no"}, local changes: ${item.working_tree_dirty ? "yes" : "no"}`,
         ].join("\n");
-    }
-    const service = item.service || {};
-    const timer = item.timer || {};
-    return [
-        `[${String(item.component || "unknown").toUpperCase()}] revision ${item.revision || "unknown"}`,
-        `  deploy: ${service.ActiveState || "unknown"}/${service.Result || "unknown"}, exit=${service.ExecMainStatus || "-"}, last=${service.ExecMainExitTimestamp || "-"}`,
-        `  timer: ${timer.ActiveState || "unknown"}, next=${timer.NextElapseUSecRealtime || "-"}, last=${timer.LastTriggerUSec || "-"}`,
-        `  update available: ${item.update_available ? "yes" : "no"}, local changes: ${item.working_tree_dirty ? "yes" : "no"}`,
-    ].join("\n");
-}
-
-async function loadDeployments() {
-    try {
-        const res = await fetch("/api/deployments", {cache: "no-store"});
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        const rows = [data.console, ...(data.deployments || [])].filter(Boolean);
-        document.getElementById("deployments").textContent = rows.map(deploymentLine).join("\n\n");
-    } catch (e) {
-        document.getElementById("deployments").textContent =
+      }
+      async function loadDeployments() {
+        try {
+          const res = await fetch("/api/deployments", { cache: "no-store" });
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          document.getElementById("deployments").textContent = [
+            data.console,
+            ...(data.deployments || []),
+          ]
+            .filter(Boolean)
+            .map(deploymentLine)
+            .join("\n\n");
+        } catch {
+          document.getElementById("deployments").textContent =
             "Deployment status unavailable. Check the agent service.";
-    }
-}
-
-async function action(name) {
-    if (name === "stop") {
-        if (!confirm("Rio bot을 중지할까?")) {
-            return;
         }
-    }
-
-    const res = await fetch(`/api/bot/${name}`, {
-        method: "POST"
-    });
-
-    if (!res.ok) {
-        alert("작업 실패");
-        return;
-    }
-
-    setTimeout(() => {
-        loadStatus();
-        loadLogs();
-    }, 1000);
-}
-
-loadStatus();
-loadLogs();
-loadDeployments();
-
-setInterval(loadStatus, 5000);
-setInterval(loadDeployments, 10000);
-
-const logBox = document.getElementById("logs");
-const logSource = new EventSource("/api/logs/stream");
-
-logSource.onmessage = (event) => {
-    logBox.textContent += event.data + "\n";
-    logBox.scrollTop = logBox.scrollHeight;
-};
-
-logSource.onerror = () => {
-    console.error("Rio log stream disconnected");
-};
-
-</script>
-
-</body>
+      }
+      async function action(name) {
+        if (name === "stop" && !confirm("Rio bot을 중지할까?")) return;
+        const res = await fetch(`/api/bot/${name}`, { method: "POST" });
+        if (!res.ok) {
+          alert("작업 실패");
+          return;
+        }
+        setTimeout(() => {
+          loadStatus();
+          loadLogs();
+        }, 1000);
+      }
+      loadStatus();
+      loadLogs();
+      loadDeployments();
+      setInterval(loadStatus, 5000);
+      setInterval(loadDeployments, 10000);
+      const logBox = document.getElementById("logs"),
+        logSource = new EventSource("/api/logs/stream");
+      logSource.onmessage = (event) => {
+        logBox.textContent += event.data + "\n";
+        logBox.scrollTop = logBox.scrollHeight;
+      };
+      logSource.onerror = () => console.error("Rio log stream disconnected");
+    </script>
+  </body>
 </html>

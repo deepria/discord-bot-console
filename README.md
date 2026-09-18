@@ -14,6 +14,16 @@ Browser
 
 The production container builds the frontend in a Node stage and copies only `frontend/dist` into the Python runtime image.
 
+## Interaction
+
+- Select one of the seven room monitors to open its operations panel. Select the
+  same monitor again, press Escape, use the close button, or select the room
+  background to close it.
+- Select Rio to open the game-style dialogue window. Repeatedly select Rio or
+  the dialogue body to advance through the portrait expressions and messages.
+- The official in-game portrait sources and redistribution note are documented
+  in `frontend/src/assets/rio/SOURCES.md`.
+
 ## Local development
 
 Use Node.js 22.22+ (or 24.15+) and npm 11+ for the frontend toolchain.

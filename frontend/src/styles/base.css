@@ -1,0 +1,104 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: #04111d;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+::selection {
+  color: #00131c;
+  background: var(--accent);
+}
+
+.command-deck {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--dark);
+  transition: background-color 700ms ease;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.status-badge i,
+.panel-state-line i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--signal);
+  box-shadow: 0 0 9px currentColor;
+}
+
+.status-badge.is-attention i,
+.status-badge.is-alert i,
+.panel-state-line.severity-attention i,
+.panel-state-line.severity-alert i {
+  background: var(--danger);
+}
+
+.small-status-strip {
+  position: fixed;
+  z-index: 12;
+  bottom: 10px;
+  left: 14px;
+  display: flex;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.small-status-strip span {
+  padding: 3px 6px;
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  color: rgba(226, 248, 255, 0.62);
+  background: rgba(1, 10, 18, 0.66);
+  font: 8px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.small-status-strip .severity-alert,
+.small-status-strip .severity-attention {
+  color: #ffd8ff;
+  border-color: rgba(244, 134, 255, 0.65);
+}

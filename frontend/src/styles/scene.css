@@ -298,7 +298,7 @@
 
 .rio-character-button {
   position: absolute;
-  z-index: 4;
+  z-index: 6;
   bottom: 0;
   left: 50%;
   width: 34%;

@@ -5,6 +5,11 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    volumes:
+      - type: bind
+        source: ./data
+        target: /run/rio-console
+        read_only: true
     networks:
       - deepria-web
 

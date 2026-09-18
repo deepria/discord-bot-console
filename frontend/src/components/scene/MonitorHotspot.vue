@@ -8,6 +8,7 @@ const props = defineProps<{
   y: number;
   width: number;
   height: number;
+  tile: string;
 }>();
 
 defineEmits<{ select: [id: MonitorStatus["id"]] }>();
@@ -23,6 +24,7 @@ defineEmits<{ select: [id: MonitorStatus["id"]] }>();
       top: `${y}%`,
       width: `${width}%`,
       height: `${height}%`,
+      backgroundImage: `url(${tile})`,
     }"
     :data-monitor="monitor.id"
     :aria-label="`${monitor.label}: ${monitor.summary}`"

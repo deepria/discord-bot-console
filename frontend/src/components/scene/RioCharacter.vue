@@ -40,6 +40,5 @@ watch(
     <span class="rio-character-motion">
       <img class="rio-character" :src="displayedExpression" alt="" />
     </span>
-    <span class="rio-talk-cue" aria-hidden="true">RIO / TALK</span>
   </button>
 </template>

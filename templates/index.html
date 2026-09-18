@@ -253,10 +253,10 @@ async function loadEvents() {
         lastEvents = data.events || [];
         renderEvents(lastEvents);
     } catch (e) {
-        const message = "Latest event request failed; showing last successful data.\n";
+        const message = `Latest event request failed: ${errorMessage(e)}\n`;
         document.getElementById("events").textContent = lastEvents.length
             ? message + eventLines(lastEvents).join("\n")
-            : "Event feed unavailable. Check the agent deployment panel below.";
+            : message + "No successful event request is available yet.";
     }
 }
 
@@ -269,6 +269,15 @@ function eventLines(events) {
 
 function renderEvents(events) {
     document.getElementById("events").textContent = eventLines(events).join("\n") || "No events yet";
+}
+
+function errorMessage(error) {
+    try {
+        const value = JSON.parse(error.message);
+        return value.detail || error.message;
+    } catch (_) {
+        return error.message || "unknown error";
+    }
 }
 
 function formatKst(value) {
@@ -304,6 +313,14 @@ async function loadLogs() {
 function deploymentLine(item) {
     if (item.available === false) {
         return `[${item.component}] ${item.detail}`;
+    }
+    if (item.component === "console") {
+        return [
+            `[CONSOLE] revision ${item.revision || "unknown"}`,
+            `  deploy: ${item.state || "unknown"}, last=${formatKst(item.at) || "-"}`,
+            `  detail: ${item.detail || "-"}`,
+            `  last successful: ${formatKst(item.last_success_at) || "-"}`,
+        ].join("\n");
     }
     const service = item.service || {};
     const timer = item.timer || {};

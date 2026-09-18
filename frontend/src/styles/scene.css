@@ -151,132 +151,112 @@
 
 .monitor-hotspot {
   position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 3px;
   padding: 0;
-  overflow: visible;
   border: 0;
-  color: #e8faff;
   background: transparent;
   cursor: pointer;
-  opacity: 1;
   pointer-events: auto;
-  --trace-color: var(--accent);
 }
 
-.monitor-guidance {
+.monitor-hotspot:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.monitor-callout {
   position: absolute;
-  inset: -2px;
-  overflow: visible;
+  z-index: 5;
+  inset: 0;
   pointer-events: none;
+  --callout-color: var(--accent);
 }
 
-.monitor-guidance polygon,
-.monitor-guidance path {
-  fill: none;
-  stroke: var(--trace-color);
-  vector-effect: non-scaling-stroke;
-  stroke-width: 1.25px;
-  stroke-linecap: square;
-  stroke-linejoin: miter;
-  filter: drop-shadow(
-    0 0 3px color-mix(in srgb, var(--trace-color) 72%, transparent)
-  );
+.monitor-callout.attention {
+  --callout-color: #f486ff;
 }
 
-.monitor-guidance polygon {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset 400ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.monitor-guidance path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset 260ms 400ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.monitor-hotspot.severity-alert,
-.monitor-hotspot.severity-attention {
-  --trace-color: #f486ff;
-}
-
-.monitor-hotspot.has-badge {
-  --trace-color: #f486ff;
-}
-
-.monitor-hotspot:hover,
-.monitor-hotspot:focus-visible,
-.monitor-hotspot.selected {
-  z-index: 2;
-}
-
-.monitor-hotspot:hover .monitor-guidance polygon,
-.monitor-hotspot:focus-visible .monitor-guidance polygon,
-.monitor-hotspot.selected .monitor-guidance polygon,
-.monitor-hotspot:hover .monitor-guidance path,
-.monitor-hotspot:focus-visible .monitor-guidance path,
-.monitor-hotspot.selected .monitor-guidance path {
-  stroke-dashoffset: 0;
-}
-
-.monitor-label,
-.monitor-summary {
-  display: block;
-  padding: 3px 5px;
-  background: rgba(1, 10, 19, 0.78);
-  font-family: var(--font-mono);
-  text-shadow: 0 1px 4px #000;
-  white-space: nowrap;
-}
-
-.monitor-tooltip {
+.monitor-callout svg {
   position: absolute;
-  bottom: var(--label-bottom);
-  left: var(--label-left);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.monitor-callout polygon,
+.monitor-callout path {
+  fill: none;
+  stroke: var(--callout-color);
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(
+    0 0 3px color-mix(in srgb, var(--callout-color) 72%, transparent)
+  );
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.monitor-callout polygon {
+  animation: monitor-callout-draw 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.monitor-callout path {
+  animation: monitor-callout-draw 280ms 340ms cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
+}
+
+@keyframes monitor-callout-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.monitor-callout-label {
+  position: absolute;
+  top: var(--label-y);
+  left: var(--label-x);
   display: grid;
+  min-width: 150px;
   gap: 3px;
-  min-width: max-content;
-  max-width: 180px;
-  padding: 8px;
-  border-left: 2px solid var(--trace-color);
+  padding: 8px 10px;
+  border-left: 2px solid var(--callout-color);
+  color: #d2eaf2;
   background: rgba(1, 10, 19, 0.88);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  font-family: var(--font-mono);
+  white-space: nowrap;
   opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 8px) scale(0.98);
-  transition:
-    opacity 160ms ease,
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(-50%) translateY(6px);
+  animation: monitor-callout-label 160ms 620ms ease-out forwards;
 }
 
-.monitor-hotspot:hover .monitor-tooltip,
-.monitor-hotspot:focus-visible .monitor-tooltip,
-.monitor-hotspot.selected .monitor-tooltip {
-  opacity: 1;
-  transform: translate(-50%, 0) scale(1);
-  transition-delay: 550ms;
+.monitor-callout-label strong,
+.monitor-callout-label small {
+  color: var(--callout-color);
 }
 
-.monitor-label {
-  color: var(--trace-color);
+.monitor-callout-label strong {
   font-size: clamp(7px, 0.55vw, 11px);
   font-weight: 800;
   letter-spacing: 0.08em;
 }
 
-.monitor-summary {
-  color: #d2eaf2;
+.monitor-callout-label span {
   font-size: clamp(6px, 0.48vw, 9px);
 }
 
-.monitor-action {
-  color: var(--trace-color);
+.monitor-callout-label small {
   font: 700 clamp(6px, 0.44vw, 8px)/1 var(--font-mono);
   letter-spacing: 0.12em;
+}
+
+@keyframes monitor-callout-label {
+  to {
+    opacity: 1;
+    transform: translateY(-50%);
+  }
 }
 
 .rio-character-button {
@@ -439,27 +419,13 @@
     padding: 6px 7px;
   }
 
-  .monitor-label {
-    max-width: 100%;
-    overflow: hidden;
-    font-size: 0;
+  .monitor-callout-label {
+    min-width: 112px;
+    padding: 5px 7px;
   }
 
-  .monitor-label::after {
-    content: attr(data-short);
-    font-size: 6px;
-  }
-
-  .monitor-summary {
-    display: none;
-  }
-
-  .monitor-tooltip {
-    bottom: calc(100% + 4px);
-    padding: 4px;
-  }
-
-  .monitor-action {
+  .monitor-callout-label span,
+  .monitor-callout-label small {
     display: none;
   }
 

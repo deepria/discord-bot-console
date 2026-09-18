@@ -6,6 +6,7 @@ import {
   type RioDialogue,
 } from "../../data/rio-dialogues";
 import type { MonitorId, MonitorStatus, SceneState } from "../../types/api";
+import MonitorCallout from "./MonitorCallout.vue";
 import MonitorHotspot from "./MonitorHotspot.vue";
 import RioBriefing from "./RioBriefing.vue";
 import RioCharacter from "./RioCharacter.vue";
@@ -37,9 +38,6 @@ interface WallTile {
   width: number;
   height: number;
   framePoints: string;
-  leaderPath: string;
-  labelLeft: string;
-  labelBottom: string;
   monitor: MonitorId;
 }
 
@@ -54,9 +52,6 @@ const positions: WallTile[] = [
     width: 12.38,
     height: 6.7,
     framePoints: "2,0 98,2 100,98 0,100",
-    leaderPath: "M 45 0 L 76 -135 L 145 -135",
-    labelLeft: "140%",
-    labelBottom: "135%",
   },
   {
     id: "link",
@@ -66,9 +61,6 @@ const positions: WallTile[] = [
     width: 12.38,
     height: 6.7,
     framePoints: "0,1 100,0 99,100 1,99",
-    leaderPath: "M 45 0 L 82 -235 L 152 -235",
-    labelLeft: "147%",
-    labelBottom: "235%",
   },
   {
     id: "runtime",
@@ -78,9 +70,6 @@ const positions: WallTile[] = [
     width: 12.38,
     height: 6.7,
     framePoints: "1,0 100,1 99,100 0,99",
-    leaderPath: "M 45 0 L 88 -330 L 158 -330",
-    labelLeft: "153%",
-    labelBottom: "330%",
   },
   {
     id: "events",
@@ -90,9 +79,6 @@ const positions: WallTile[] = [
     width: 12.38,
     height: 6.7,
     framePoints: "0,1 99,0 100,99 1,100",
-    leaderPath: "M 45 0 L 94 -425 L 164 -425",
-    labelLeft: "159%",
-    labelBottom: "425%",
   },
   {
     id: "logs",
@@ -102,9 +88,6 @@ const positions: WallTile[] = [
     width: 10.53,
     height: 6.7,
     framePoints: "4,0 100,4 96,100 0,96",
-    leaderPath: "M 50 2 L 112 -145 L 188 -145",
-    labelLeft: "183%",
-    labelBottom: "145%",
   },
   {
     id: "deploy",
@@ -114,9 +97,6 @@ const positions: WallTile[] = [
     width: 10.53,
     height: 6.7,
     framePoints: "7,0 100,8 93,100 0,92",
-    leaderPath: "M 50 2 L 118 -245 L 194 -245",
-    labelLeft: "189%",
-    labelBottom: "245%",
   },
   {
     id: "control",
@@ -126,13 +106,18 @@ const positions: WallTile[] = [
     width: 10.53,
     height: 6.7,
     framePoints: "5,0 100,5 96,100 0,95",
-    leaderPath: "M 50 2 L 124 -340 L 200 -340",
-    labelLeft: "195%",
-    labelBottom: "340%",
   },
 ];
 
 const linkLabel = computed(() => props.monitors.link.summary);
+const hoveredMonitor = ref<MonitorId | null>(null);
+const hoveredFrame = computed(() =>
+  hoveredMonitor.value
+    ? (positions.find(
+        (position) => position.monitor === hoveredMonitor.value,
+      ) ?? null)
+    : null,
+);
 const currentDialogue = computed<RioDialogue>(() => {
   if (dialogueIndex.value === 0) {
     return {
@@ -178,8 +163,17 @@ function interactWithRio(): void {
 }
 
 function selectMonitor(id: MonitorId): void {
+  hoveredMonitor.value = null;
   closeDialogue();
   emit("select", id);
+}
+
+function showCallout(id: MonitorId): void {
+  hoveredMonitor.value = id;
+}
+
+function hideCallout(): void {
+  hoveredMonitor.value = null;
 }
 
 function dismissFromBackground(event: MouseEvent): void {
@@ -231,13 +225,20 @@ onUnmounted(() => window.clearInterval(clockTimer));
           :y="position.y"
           :width="position.width"
           :height="position.height"
-          :frame-points="position.framePoints"
-          :leader-path="position.leaderPath"
-          :label-left="position.labelLeft"
-          :label-bottom="position.labelBottom"
           @select="selectMonitor"
+          @hover="showCallout"
+          @leave="hideCallout"
         />
       </nav>
+      <MonitorCallout
+        v-if="hoveredFrame && hoveredMonitor"
+        :monitor="monitors[hoveredMonitor]"
+        :x="hoveredFrame.x"
+        :y="hoveredFrame.y"
+        :width="hoveredFrame.width"
+        :height="hoveredFrame.height"
+        :frame-points="hoveredFrame.framePoints"
+      />
       <RioCharacter
         :scene="scene"
         :expression="currentDialogue.image"

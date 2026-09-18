@@ -84,7 +84,7 @@ test("opens a monitor and shows live operational data", async ({
   ).toBeHidden();
 });
 
-test("draws an external leader before revealing monitor guidance", async ({
+test("connects the hovered monitor corners before revealing its callout", async ({
   page,
 }, testInfo) => {
   await mockConsole(page);
@@ -93,9 +93,13 @@ test("draws an external leader before revealing monitor guidance", async ({
   const deploy = page.getByRole("button", { name: /DEPLOY WATCH: READY/ });
   await deploy.hover();
   await page.waitForTimeout(750);
-  await expect(deploy.locator(".monitor-guidance polygon")).toBeVisible();
-  await expect(deploy.locator(".monitor-guidance path")).toBeVisible();
-  await expect(deploy.locator(".monitor-tooltip")).toBeVisible();
+  const callout = page.locator(".monitor-callout");
+  await expect(callout).toHaveCount(1);
+  await expect(callout.locator("polygon")).toBeVisible();
+  await expect(callout.locator("path")).toBeVisible();
+  await expect(callout.locator(".monitor-callout-label")).toContainText(
+    "DEPLOY WATCH",
+  );
   await page.screenshot({
     path: testInfo.outputPath(`monitor-leader-${testInfo.project.name}.png`),
     fullPage: true,

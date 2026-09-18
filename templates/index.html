@@ -140,6 +140,19 @@
       body[data-scene="alert"] .backdrop.alert {
         opacity: 1;
       }
+      .rio-layer {
+        position: absolute;
+        z-index: 2;
+        bottom: -1%;
+        left: 50%;
+        height: 83%;
+        max-width: 48%;
+        object-fit: contain;
+        object-position: bottom center;
+        transform: translateX(-50%);
+        filter: drop-shadow(0 12px 16px rgba(0, 0, 0, 0.34));
+        pointer-events: none;
+      }
       .hud {
         position: absolute;
         z-index: 2;
@@ -464,6 +477,11 @@
           class="backdrop alert"
           src="/static/rio-office-alert.png"
           alt="Rio in a purple-lit alert control room"
+        />
+        <img
+          class="rio-layer"
+          src="/static/rio-office-rio.png"
+          alt="Rio monitoring the control room"
         />
         <div class="hud">
           <div class="hud-block">

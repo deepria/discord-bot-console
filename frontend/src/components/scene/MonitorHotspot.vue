@@ -8,11 +8,6 @@ const props = defineProps<{
   y: number;
   width: number;
   height: number;
-  tile: string;
-  tiltX: number;
-  tiltY: number;
-  frameShape: string;
-  transformOrigin: string;
 }>();
 
 defineEmits<{ select: [id: MonitorStatus["id"]] }>();
@@ -31,11 +26,6 @@ defineEmits<{ select: [id: MonitorStatus["id"]] }>();
       top: `${y}%`,
       width: `${width}%`,
       height: `${height}%`,
-      backgroundImage: `url(${tile})`,
-      '--tile-tilt-x': `${tiltX}deg`,
-      '--tile-tilt-y': `${tiltY}deg`,
-      '--tile-origin': transformOrigin,
-      clipPath: frameShape,
     }"
     :data-monitor="monitor.id"
     :aria-label="`${monitor.label}: ${monitor.summary}`"
@@ -43,6 +33,9 @@ defineEmits<{ select: [id: MonitorStatus["id"]] }>();
     aria-controls="monitor-panel"
     @click="$emit('select', props.monitor.id)"
   >
+    <span class="monitor-trace" aria-hidden="true">
+      <i></i><i></i><i></i><i></i>
+    </span>
     <span class="monitor-tooltip" role="presentation">
       <span class="monitor-label" :data-short="monitor.id.toUpperCase()">{{
         monitor.label

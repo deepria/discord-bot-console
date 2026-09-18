@@ -36,10 +36,6 @@ interface WallTile {
   y: number;
   width: number;
   height: number;
-  tiltX: number;
-  tiltY: number;
-  frameShape: string;
-  transformOrigin: string;
   monitor: MonitorId;
 }
 
@@ -53,10 +49,6 @@ const positions: WallTile[] = [
     y: 21.49,
     width: 12.38,
     height: 6.7,
-    tiltX: -0.7,
-    tiltY: 1.4,
-    frameShape: "polygon(1% 0, 99% 1%, 100% 99%, 0 100%)",
-    transformOrigin: "right center",
   },
   {
     id: "link",
@@ -65,10 +57,6 @@ const positions: WallTile[] = [
     y: 29.25,
     width: 12.38,
     height: 6.7,
-    tiltX: -0.25,
-    tiltY: 1.4,
-    frameShape: "polygon(0 1%, 100% 0, 99% 100%, 1% 99%)",
-    transformOrigin: "right center",
   },
   {
     id: "runtime",
@@ -77,10 +65,6 @@ const positions: WallTile[] = [
     y: 37.24,
     width: 12.38,
     height: 6.7,
-    tiltX: 0.15,
-    tiltY: 1.4,
-    frameShape: "polygon(1% 0, 100% 1%, 99% 100%, 0 99%)",
-    transformOrigin: "right center",
   },
   {
     id: "events",
@@ -89,10 +73,6 @@ const positions: WallTile[] = [
     y: 45.22,
     width: 12.38,
     height: 6.7,
-    tiltX: 0.55,
-    tiltY: 1.4,
-    frameShape: "polygon(0 1%, 99% 0, 100% 99%, 1% 100%)",
-    transformOrigin: "right center",
   },
   {
     id: "logs",
@@ -101,10 +81,6 @@ const positions: WallTile[] = [
     y: 21.49,
     width: 10.53,
     height: 6.7,
-    tiltX: -1,
-    tiltY: -3.2,
-    frameShape: "polygon(4% 0, 100% 4%, 96% 100%, 0 96%)",
-    transformOrigin: "left center",
   },
   {
     id: "deploy",
@@ -113,10 +89,6 @@ const positions: WallTile[] = [
     y: 29.25,
     width: 10.53,
     height: 6.7,
-    tiltX: -0.4,
-    tiltY: -5.4,
-    frameShape: "polygon(7% 0, 100% 8%, 93% 100%, 0 92%)",
-    transformOrigin: "left center",
   },
   {
     id: "control",
@@ -125,17 +97,8 @@ const positions: WallTile[] = [
     y: 37.24,
     width: 10.53,
     height: 6.7,
-    tiltX: 0.25,
-    tiltY: -4.1,
-    frameShape: "polygon(5% 0, 100% 5%, 96% 100%, 0 95%)",
-    transformOrigin: "left center",
   },
 ];
-
-function tileSource(tile: WallTile): string {
-  const state = props.scene === "alert" ? "alert" : "healthy";
-  return `/monitor-tiles/${state}-${tile.id}.webp`;
-}
 
 const linkLabel = computed(() => props.monitors.link.summary);
 const currentDialogue = computed<RioDialogue>(() => {
@@ -236,11 +199,6 @@ onUnmounted(() => window.clearInterval(clockTimer));
           :y="position.y"
           :width="position.width"
           :height="position.height"
-          :tilt-x="position.tiltX"
-          :tilt-y="position.tiltY"
-          :frame-shape="position.frameShape"
-          :transform-origin="position.transformOrigin"
-          :tile="tileSource(position)"
           @select="selectMonitor"
         />
       </nav>

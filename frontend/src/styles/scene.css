@@ -174,13 +174,6 @@
     transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.monitor-tile {
-  position: absolute;
-  display: block;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-}
-
 .monitor-hotspot::before,
 .monitor-hotspot::after {
   position: absolute;
@@ -213,7 +206,7 @@
   box-shadow:
     0 0 18px rgba(var(--accent-rgb), 0.46),
     inset 0 0 16px rgba(var(--accent-rgb), 0.14);
-  transform: scale(1.08);
+  transform: scale(1.025);
 }
 
 .monitor-hotspot:hover::before,

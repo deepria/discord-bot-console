@@ -32,63 +32,77 @@ const dialogueIndex = ref(0);
 
 interface WallTile {
   id: string;
-  row: number;
-  column: number;
   x: number;
   y: number;
   width: number;
   height: number;
-  monitor?: MonitorId;
+  monitor: MonitorId;
 }
 
-const activeMonitors: Partial<Record<string, MonitorId>> = {
-  "1-1": "system",
-  "1-2": "link",
-  "1-3": "runtime",
-  "1-4": "events",
-  "1-5": "logs",
-  "1-6": "deploy",
-  "2-1": "control",
-};
-
-const columns = [1.2, 17.7, 34.2, 50.7, 67.2, 83.7];
-const rows = [
-  { y: 21.5, height: 5.85 },
-  { y: 28.5, height: 5.21 },
-  { y: 33.84, height: 5.32 },
-  { y: 39.38, height: 5 },
+// Coordinates are measured from the outer frames already drawn in the wall art.
+// The remaining frames stay purely decorative until a future feature is assigned.
+const positions: WallTile[] = [
+  {
+    id: "system",
+    monitor: "system",
+    x: 0.96,
+    y: 21.49,
+    width: 12.38,
+    height: 6.7,
+  },
+  {
+    id: "link",
+    monitor: "link",
+    x: 0.96,
+    y: 29.25,
+    width: 12.38,
+    height: 6.7,
+  },
+  {
+    id: "runtime",
+    monitor: "runtime",
+    x: 0.96,
+    y: 37.24,
+    width: 12.38,
+    height: 6.7,
+  },
+  {
+    id: "events",
+    monitor: "events",
+    x: 0.96,
+    y: 45.22,
+    width: 12.38,
+    height: 6.7,
+  },
+  {
+    id: "logs",
+    monitor: "logs",
+    x: 13.82,
+    y: 21.49,
+    width: 10.53,
+    height: 6.7,
+  },
+  {
+    id: "deploy",
+    monitor: "deploy",
+    x: 13.82,
+    y: 29.25,
+    width: 10.53,
+    height: 6.7,
+  },
+  {
+    id: "control",
+    monitor: "control",
+    x: 13.82,
+    y: 37.24,
+    width: 10.53,
+    height: 6.7,
+  },
 ];
-
-const positions: WallTile[] = rows.flatMap(({ y, height }, rowIndex) =>
-  columns.map((x, columnIndex) => {
-    const row = rowIndex + 1;
-    const column = columnIndex + 1;
-    return {
-      id: `r${row}-c${column}`,
-      row,
-      column,
-      x,
-      y,
-      width: 14.95,
-      height,
-      monitor: activeMonitors[`${row}-${column}`],
-    };
-  }),
-);
 
 function tileSource(tile: WallTile): string {
   const state = props.scene === "alert" ? "alert" : "healthy";
-  return `/monitor-tiles/${state}-r${tile.row}-c${tile.column}.webp`;
-}
-
-function tileStyle(tile: WallTile): Record<string, string> {
-  return {
-    left: `${tile.x}%`,
-    top: `${tile.y}%`,
-    width: `${tile.width}%`,
-    height: `${tile.height}%`,
-    backgroundImage: `url(${tileSource(tile)})`,
-  };
+  return `/monitor-tiles/${state}-${tile.id}.webp`;
 }
 
 const linkLabel = computed(() => props.monitors.link.summary);
@@ -181,25 +195,18 @@ onUnmounted(() => window.clearInterval(clockTimer));
         </div>
       </header>
       <nav class="monitor-navigation" aria-label="관제 모니터">
-        <template v-for="position in positions" :key="position.id">
-          <MonitorHotspot
-            v-if="position.monitor"
-            :monitor="monitors[position.monitor]"
-            :selected="selected === position.monitor"
-            :x="position.x"
-            :y="position.y"
-            :width="position.width"
-            :height="position.height"
-            :tile="tileSource(position)"
-            @select="selectMonitor"
-          />
-          <span
-            v-else
-            class="monitor-tile monitor-tile-disabled"
-            :style="tileStyle(position)"
-            aria-hidden="true"
-          ></span>
-        </template>
+        <MonitorHotspot
+          v-for="position in positions"
+          :key="position.id"
+          :monitor="monitors[position.monitor]"
+          :selected="selected === position.monitor"
+          :x="position.x"
+          :y="position.y"
+          :width="position.width"
+          :height="position.height"
+          :tile="tileSource(position)"
+          @select="selectMonitor"
+        />
       </nav>
       <RioCharacter
         :scene="scene"

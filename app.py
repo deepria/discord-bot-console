@@ -6,10 +6,12 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 app = FastAPI(title="Rio Control Center")
 templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 AGENT_URL = os.getenv("RIO_AGENT_URL", "http://172.30.1.101:8787")
 AGENT_TOKEN = os.environ["RIO_AGENT_TOKEN"]

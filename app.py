@@ -108,6 +108,12 @@ async def events(lines: int = 50):
     return await agent_get(f"/events?lines={lines}")
 
 
+@app.get("/api/runtime-events")
+async def runtime_events(lines: int = 50):
+    """Public console route kept distinct from the agent's /events endpoint."""
+    return await events(lines)
+
+
 @app.get("/api/deployments")
 async def deployments():
     agent = await agent_get("/deployments")

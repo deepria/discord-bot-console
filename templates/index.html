@@ -247,7 +247,7 @@ function renderStatus(data, stale) {
 
 async function loadEvents() {
     try {
-        const res = await fetch("/api/events?lines=100", {cache: "no-store"});
+        const res = await fetch("/api/runtime-events?lines=100", {cache: "no-store"});
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         lastEvents = data.events || [];

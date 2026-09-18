@@ -17,6 +17,7 @@ describe("MonitorHotspot", () => {
         y: 22,
         width: 12,
         height: 18,
+        tile: "/monitor-tile.webp",
       },
     });
 

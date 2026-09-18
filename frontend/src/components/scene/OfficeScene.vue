@@ -10,6 +10,13 @@ import MonitorHotspot from "./MonitorHotspot.vue";
 import RioBriefing from "./RioBriefing.vue";
 import RioCharacter from "./RioCharacter.vue";
 import SceneLayers from "./SceneLayers.vue";
+import systemTile from "../../assets/monitors/system.webp";
+import linkTile from "../../assets/monitors/link.webp";
+import runtimeTile from "../../assets/monitors/runtime.webp";
+import eventsTile from "../../assets/monitors/events.webp";
+import logsTile from "../../assets/monitors/logs.webp";
+import deployTile from "../../assets/monitors/deploy.webp";
+import controlTile from "../../assets/monitors/control.webp";
 
 const props = defineProps<{
   scene: SceneState;
@@ -32,15 +39,15 @@ const dialogueIndex = ref(0);
 
 const positions: Record<
   MonitorId,
-  { x: number; y: number; width: number; height: number }
+  { x: number; y: number; width: number; height: number; tile: string }
 > = {
-  system: { x: 1, y: 20, width: 12, height: 39 },
-  link: { x: 13.5, y: 20, width: 12, height: 39 },
-  runtime: { x: 26, y: 20, width: 12, height: 39 },
-  events: { x: 38.5, y: 20, width: 12, height: 39 },
-  logs: { x: 51, y: 20, width: 12, height: 39 },
-  deploy: { x: 63.5, y: 20, width: 12, height: 39 },
-  control: { x: 76, y: 20, width: 23, height: 39 },
+  system: { x: 1.5, y: 21.7, width: 6, height: 5.9, tile: systemTile },
+  link: { x: 9, y: 21.7, width: 9.6, height: 6.4, tile: linkTile },
+  runtime: { x: 19.1, y: 21.7, width: 5.4, height: 6.2, tile: runtimeTile },
+  events: { x: 25.7, y: 21.7, width: 8.1, height: 6.2, tile: eventsTile },
+  logs: { x: 35.6, y: 21.7, width: 6.9, height: 6.2, tile: logsTile },
+  deploy: { x: 43.7, y: 21.7, width: 6.9, height: 6.2, tile: deployTile },
+  control: { x: 52, y: 21.7, width: 9.3, height: 5.4, tile: controlTile },
 };
 
 const linkLabel = computed(() => props.monitors.link.summary);

@@ -158,6 +158,11 @@
             <div id="cpu" class="value">-</div>
         </div>
 
+        <div class="card">
+            <div class="label">DATA LINK</div>
+            <div id="connection" class="value">...</div>
+        </div>
+
     </div>
 
     <div class="actions">
@@ -172,9 +177,15 @@
     <h3>Discord / AI Events</h3>
     <pre id="events">Loading...</pre>
 
+    <h3>Deployments</h3>
+    <pre id="deployments">Loading...</pre>
+
 </div>
 
 <script>
+
+let lastStatus = null;
+let lastEvents = [];
 
 function uptime(seconds) {
     if (seconds == null) return "-";
@@ -189,52 +200,75 @@ function uptime(seconds) {
 async function loadStatus() {
     try {
         const res = await fetch("/api/status");
+        if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-
-        const status = document.getElementById("status");
-
-        if (data.online) {
-            status.textContent = "● ONLINE";
-            status.className = "value online";
-        } else {
-            status.textContent = "● OFFLINE";
-            status.className = "value offline";
-        }
-
-        document.getElementById("pid").textContent = data.pid ?? "-";
-        document.getElementById("memory").textContent =
-            data.memory_mb != null ? `${data.memory_mb} MB` : "-";
-
-        document.getElementById("uptime").textContent =
-            uptime(data.uptime_seconds);
-
-        const runtime = data.runtime || {};
-        document.getElementById("model").textContent =
-            runtime.model ? `${runtime.provider} / ${runtime.model}` : "-";
-        document.getElementById("guilds").textContent =
-            runtime.guild_count ?? "-";
-        document.getElementById("latency").textContent =
-            runtime.latency_ms != null ? `${runtime.latency_ms} ms` : "-";
-        document.getElementById("cpu").textContent =
-            data.cpu_percent != null ? `${data.cpu_percent}%` : "-";
-
+        lastStatus = data;
+        renderStatus(data, false);
     } catch (e) {
-        document.getElementById("status").textContent = "ERROR";
+        if (lastStatus) {
+            renderStatus(lastStatus, true);
+        } else {
+            document.getElementById("status").textContent = "● UNAVAILABLE";
+            document.getElementById("status").className = "value offline";
+        }
+        document.getElementById("connection").textContent = "DEGRADED";
+        document.getElementById("connection").className = "value offline";
     }
+}
+
+function renderStatus(data, stale) {
+    const status = document.getElementById("status");
+
+    if (data.online) {
+        status.textContent = stale ? "● STALE" : "● ONLINE";
+        status.className = stale ? "value offline" : "value online";
+    } else {
+        status.textContent = "● OFFLINE";
+        status.className = "value offline";
+    }
+
+    document.getElementById("pid").textContent = data.pid ?? "-";
+    document.getElementById("memory").textContent =
+        data.memory_mb != null ? `${data.memory_mb} MB` : "-";
+
+    document.getElementById("uptime").textContent = uptime(data.uptime_seconds);
+
+    const runtime = data.runtime || {};
+    document.getElementById("model").textContent =
+        runtime.model ? `${runtime.provider} / ${runtime.model}` : "-";
+    document.getElementById("guilds").textContent = runtime.guild_count ?? "-";
+    document.getElementById("latency").textContent =
+        runtime.latency_ms != null ? `${runtime.latency_ms} ms` : "-";
+    document.getElementById("cpu").textContent =
+        data.cpu_percent != null ? `${data.cpu_percent}%` : "-";
+    document.getElementById("connection").textContent = stale ? "STALE" : "CONNECTED";
+    document.getElementById("connection").className = stale ? "value offline" : "value online";
 }
 
 async function loadEvents() {
     try {
         const res = await fetch("/api/events?lines=100");
+        if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        const values = (data.events || []).map((event) => {
-            const { at, event: name, ...details } = event;
-            return `${formatKst(at)} ${name || "event"} ${JSON.stringify(details)}`;
-        });
-        document.getElementById("events").textContent = values.join("\n") || "No events yet";
+        lastEvents = data.events || [];
+        renderEvents(lastEvents);
     } catch (e) {
-        document.getElementById("events").textContent = "Failed to load events";
+        const message = "Latest event request failed; showing last successful data.\n";
+        document.getElementById("events").textContent = lastEvents.length
+            ? message + eventLines(lastEvents).join("\n")
+            : "Event feed unavailable. Check the agent deployment panel below.";
     }
+}
+
+function eventLines(events) {
+    return events.map((event) => {
+        const { at, event: name, ...details } = event;
+        return `${formatKst(at)} ${name || "event"} ${JSON.stringify(details)}`;
+    });
+}
+
+function renderEvents(events) {
+    document.getElementById("events").textContent = eventLines(events).join("\n") || "No events yet";
 }
 
 function formatKst(value) {
@@ -267,6 +301,33 @@ async function loadLogs() {
     }
 }
 
+function deploymentLine(item) {
+    if (item.available === false) {
+        return `[${item.component}] ${item.detail}`;
+    }
+    const service = item.service || {};
+    const timer = item.timer || {};
+    return [
+        `[${String(item.component || "unknown").toUpperCase()}] revision ${item.revision || "unknown"}`,
+        `  deploy: ${service.ActiveState || "unknown"}/${service.Result || "unknown"}, exit=${service.ExecMainStatus || "-"}, last=${service.ExecMainExitTimestamp || "-"}`,
+        `  timer: ${timer.ActiveState || "unknown"}, next=${timer.NextElapseUSecRealtime || "-"}, last=${timer.LastTriggerUSec || "-"}`,
+        `  update available: ${item.update_available ? "yes" : "no"}, local changes: ${item.working_tree_dirty ? "yes" : "no"}`,
+    ].join("\n");
+}
+
+async function loadDeployments() {
+    try {
+        const res = await fetch("/api/deployments");
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        const rows = [data.console, ...(data.deployments || [])].filter(Boolean);
+        document.getElementById("deployments").textContent = rows.map(deploymentLine).join("\n\n");
+    } catch (e) {
+        document.getElementById("deployments").textContent =
+            "Deployment status unavailable. Check the agent service.";
+    }
+}
+
 async function action(name) {
     if (name === "stop") {
         if (!confirm("Rio bot을 중지할까?")) {
@@ -292,9 +353,11 @@ async function action(name) {
 loadStatus();
 loadLogs();
 loadEvents();
+loadDeployments();
 
 setInterval(loadStatus, 5000);
 setInterval(loadEvents, 5000);
+setInterval(loadDeployments, 10000);
 
 const logBox = document.getElementById("logs");
 const logSource = new EventSource("/api/logs/stream");

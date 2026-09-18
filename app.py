@@ -1,14 +1,21 @@
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+import asyncio
+import json
 import httpx
 import os
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI(title="Rio Control Center")
 templates = Jinja2Templates(directory="templates")
 
 AGENT_URL = os.getenv("RIO_AGENT_URL", "http://172.30.1.101:8787")
 AGENT_TOKEN = os.environ["RIO_AGENT_TOKEN"]
+LOCAL_DEPLOY_STATUS_PATH = Path(
+    os.getenv("RIO_CONSOLE_DEPLOY_STATUS_PATH", "/run/rio-console/deploy-status.json")
+)
 
 HEADERS = {
     "Authorization": f"Bearer {AGENT_TOKEN}"
@@ -16,19 +23,19 @@ HEADERS = {
 
 
 async def agent_get(path: str):
-    async with httpx.AsyncClient(timeout=10) as client:
-        response = await client.get(
-            f"{AGENT_URL}{path}",
-            headers=HEADERS
-        )
-
-    if response.status_code >= 400:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Agent error: {response.text}"
-        )
-
-    return response.json()
+    error = "agent request failed"
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(f"{AGENT_URL}{path}", headers=HEADERS)
+            if response.is_success:
+                return response.json()
+            error = f"agent returned HTTP {response.status_code}: {response.text[:300]}"
+        except (httpx.HTTPError, ValueError) as exc:
+            error = f"agent unavailable: {type(exc).__name__}"
+        if attempt == 0:
+            await asyncio.sleep(0.25)
+    raise HTTPException(status_code=502, detail=error)
 
 
 async def agent_post(path: str):
@@ -45,6 +52,26 @@ async def agent_post(path: str):
         )
 
     return response.json()
+
+
+def local_deployment_status() -> dict:
+    try:
+        value = json.loads(LOCAL_DEPLOY_STATUS_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {
+            "component": "console",
+            "available": False,
+            "detail": "Host deployment status has not been configured yet.",
+        }
+    except (OSError, json.JSONDecodeError):
+        return {
+            "component": "console",
+            "available": False,
+            "detail": "Host deployment status file is unreadable.",
+        }
+    return value if isinstance(value, dict) else {
+        "component": "console", "available": False, "detail": "Invalid deployment status data."
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -71,6 +98,12 @@ async def logs(lines: int = 50):
 async def events(lines: int = 50):
     lines = max(1, min(lines, 500))
     return await agent_get(f"/events?lines={lines}")
+
+
+@app.get("/api/deployments")
+async def deployments():
+    agent = await agent_get("/deployments")
+    return {"console": local_deployment_status(), **agent}
 
 
 @app.post("/api/bot/start")

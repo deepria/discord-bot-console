@@ -18,6 +18,8 @@ describe("MonitorHotspot", () => {
         width: 12,
         height: 18,
         tile: "/monitor-tile.webp",
+        tiltX: -0.5,
+        tiltY: 1,
       },
     });
 

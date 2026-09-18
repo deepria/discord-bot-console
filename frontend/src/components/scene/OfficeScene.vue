@@ -36,6 +36,8 @@ interface WallTile {
   y: number;
   width: number;
   height: number;
+  tiltX: number;
+  tiltY: number;
   monitor: MonitorId;
 }
 
@@ -49,6 +51,8 @@ const positions: WallTile[] = [
     y: 21.49,
     width: 12.38,
     height: 6.7,
+    tiltX: -0.7,
+    tiltY: 1.4,
   },
   {
     id: "link",
@@ -57,6 +61,8 @@ const positions: WallTile[] = [
     y: 29.25,
     width: 12.38,
     height: 6.7,
+    tiltX: -0.25,
+    tiltY: 1.4,
   },
   {
     id: "runtime",
@@ -65,6 +71,8 @@ const positions: WallTile[] = [
     y: 37.24,
     width: 12.38,
     height: 6.7,
+    tiltX: 0.15,
+    tiltY: 1.4,
   },
   {
     id: "events",
@@ -73,6 +81,8 @@ const positions: WallTile[] = [
     y: 45.22,
     width: 12.38,
     height: 6.7,
+    tiltX: 0.55,
+    tiltY: 1.4,
   },
   {
     id: "logs",
@@ -81,6 +91,8 @@ const positions: WallTile[] = [
     y: 21.49,
     width: 10.53,
     height: 6.7,
+    tiltX: -0.7,
+    tiltY: 0.55,
   },
   {
     id: "deploy",
@@ -89,6 +101,8 @@ const positions: WallTile[] = [
     y: 29.25,
     width: 10.53,
     height: 6.7,
+    tiltX: -0.25,
+    tiltY: 0.55,
   },
   {
     id: "control",
@@ -97,6 +111,8 @@ const positions: WallTile[] = [
     y: 37.24,
     width: 10.53,
     height: 6.7,
+    tiltX: 0.15,
+    tiltY: 0.55,
   },
 ];
 
@@ -204,6 +220,8 @@ onUnmounted(() => window.clearInterval(clockTimer));
           :y="position.y"
           :width="position.width"
           :height="position.height"
+          :tilt-x="position.tiltX"
+          :tilt-y="position.tiltY"
           :tile="tileSource(position)"
           @select="selectMonitor"
         />

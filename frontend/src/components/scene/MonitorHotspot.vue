@@ -9,6 +9,8 @@ const props = defineProps<{
   width: number;
   height: number;
   tile: string;
+  tiltX: number;
+  tiltY: number;
 }>();
 
 defineEmits<{ select: [id: MonitorStatus["id"]] }>();
@@ -28,6 +30,8 @@ defineEmits<{ select: [id: MonitorStatus["id"]] }>();
       width: `${width}%`,
       height: `${height}%`,
       backgroundImage: `url(${tile})`,
+      '--tile-tilt-x': `${tiltX}deg`,
+      '--tile-tilt-y': `${tiltY}deg`,
     }"
     :data-monitor="monitor.id"
     :aria-label="`${monitor.label}: ${monitor.summary}`"

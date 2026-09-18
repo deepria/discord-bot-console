@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import {
   rioDialogues,
   rioExpressions,
   type RioDialogue,
 } from "../../data/rio-dialogues";
 import type { MonitorId, MonitorStatus, SceneState } from "../../types/api";
-import MonitorCallout from "./MonitorCallout.vue";
-import MonitorHotspot from "./MonitorHotspot.vue";
 import RioBriefing from "./RioBriefing.vue";
 import RioCharacter from "./RioCharacter.vue";
 import SceneLayers from "./SceneLayers.vue";
@@ -30,94 +28,10 @@ const time = ref("--:--:-- KST");
 let clockTimer: number | undefined;
 const dialogueOpen = ref(false);
 const dialogueIndex = ref(0);
-
-interface WallTile {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  framePoints: string;
-  monitor: MonitorId;
-}
-
-// Coordinates are measured from the outer frames already drawn in the wall art.
-// The remaining frames stay purely decorative until a future feature is assigned.
-const positions: WallTile[] = [
-  {
-    id: "system",
-    monitor: "system",
-    x: 0.96,
-    y: 21.49,
-    width: 12.38,
-    height: 6.7,
-    framePoints: "2,0 98,2 100,98 0,100",
-  },
-  {
-    id: "link",
-    monitor: "link",
-    x: 0.96,
-    y: 29.25,
-    width: 12.38,
-    height: 6.7,
-    framePoints: "0,1 100,0 99,100 1,99",
-  },
-  {
-    id: "runtime",
-    monitor: "runtime",
-    x: 0.96,
-    y: 37.24,
-    width: 12.38,
-    height: 6.7,
-    framePoints: "1,0 100,1 99,100 0,99",
-  },
-  {
-    id: "events",
-    monitor: "events",
-    x: 0.96,
-    y: 45.22,
-    width: 12.38,
-    height: 6.7,
-    framePoints: "0,1 99,0 100,99 1,100",
-  },
-  {
-    id: "logs",
-    monitor: "logs",
-    x: 13.82,
-    y: 21.49,
-    width: 10.53,
-    height: 6.7,
-    framePoints: "4,0 100,4 96,100 0,96",
-  },
-  {
-    id: "deploy",
-    monitor: "deploy",
-    x: 13.82,
-    y: 29.25,
-    width: 10.53,
-    height: 6.7,
-    framePoints: "7,0 100,8 93,100 0,92",
-  },
-  {
-    id: "control",
-    monitor: "control",
-    x: 13.82,
-    y: 37.24,
-    width: 10.53,
-    height: 6.7,
-    framePoints: "5,0 100,5 96,100 0,95",
-  },
-];
+const controlMenuOpen = ref(false);
 
 const linkLabel = computed(() => props.monitors.link.summary);
-const hoveredMonitor = ref<MonitorId | null>(null);
-const hoveredFrame = computed(() =>
-  hoveredMonitor.value
-    ? (positions.find(
-        (position) => position.monitor === hoveredMonitor.value,
-      ) ?? null)
-    : null,
-);
+const controlItems = computed(() => Object.values(props.monitors));
 const currentDialogue = computed<RioDialogue>(() => {
   if (dialogueIndex.value === 0) {
     return {
@@ -140,7 +54,9 @@ function updateClock(): void {
     }).format(new Date()) + " KST";
 }
 
-function focusMonitor(id: MonitorId): void {
+async function focusMonitor(id: MonitorId): Promise<void> {
+  controlMenuOpen.value = true;
+  await nextTick();
   root.value?.querySelector<HTMLElement>(`[data-monitor="${id}"]`)?.focus();
 }
 
@@ -156,6 +72,7 @@ function interactWithRio(): void {
   if (!dialogueOpen.value) {
     dialogueIndex.value = 0;
     dialogueOpen.value = true;
+    controlMenuOpen.value = false;
     emit("dismissPanel");
     return;
   }
@@ -163,17 +80,9 @@ function interactWithRio(): void {
 }
 
 function selectMonitor(id: MonitorId): void {
-  hoveredMonitor.value = null;
+  controlMenuOpen.value = false;
   closeDialogue();
   emit("select", id);
-}
-
-function showCallout(id: MonitorId): void {
-  hoveredMonitor.value = id;
-}
-
-function hideCallout(): void {
-  hoveredMonitor.value = null;
 }
 
 function dismissFromBackground(event: MouseEvent): void {
@@ -181,6 +90,7 @@ function dismissFromBackground(event: MouseEvent): void {
   if (!(target instanceof Element)) return;
   if (target.closest("button, a, input, select, textarea, [role='dialog']"))
     return;
+  controlMenuOpen.value = false;
   closeDialogue();
   emit("dismissPanel");
 }
@@ -215,30 +125,41 @@ onUnmounted(() => window.clearInterval(clockTimer));
           <strong>{{ linkLabel }}</strong>
         </div>
       </header>
-      <nav class="monitor-navigation" aria-label="관제 모니터">
-        <MonitorHotspot
-          v-for="position in positions"
-          :key="position.id"
-          :monitor="monitors[position.monitor]"
-          :selected="selected === position.monitor"
-          :x="position.x"
-          :y="position.y"
-          :width="position.width"
-          :height="position.height"
-          @select="selectMonitor"
-          @hover="showCallout"
-          @leave="hideCallout"
-        />
-      </nav>
-      <MonitorCallout
-        v-if="hoveredFrame && hoveredMonitor"
-        :monitor="monitors[hoveredMonitor]"
-        :x="hoveredFrame.x"
-        :y="hoveredFrame.y"
-        :width="hoveredFrame.width"
-        :height="hoveredFrame.height"
-        :frame-points="hoveredFrame.framePoints"
-      />
+      <div class="control-dock">
+        <button
+          type="button"
+          class="control-dock-trigger"
+          aria-controls="control-dock-menu"
+          :aria-expanded="controlMenuOpen"
+          @click="controlMenuOpen = !controlMenuOpen"
+        >
+          CONTROL PANEL
+        </button>
+        <Transition name="control-menu">
+          <nav
+            v-if="controlMenuOpen"
+            id="control-dock-menu"
+            class="control-dock-menu"
+            aria-label="관제 메뉴"
+          >
+            <button
+              v-for="monitor in controlItems"
+              :key="monitor.id"
+              type="button"
+              :class="{
+                attention: monitor.badge || monitor.severity !== 'normal',
+              }"
+              :data-monitor="monitor.id"
+              :aria-label="`${monitor.label}: ${monitor.summary}`"
+              aria-controls="monitor-panel"
+              @click="selectMonitor(monitor.id)"
+            >
+              <span>{{ monitor.label }}</span>
+              <small>{{ monitor.summary }}</small>
+            </button>
+          </nav>
+        </Transition>
+      </div>
       <RioCharacter
         :scene="scene"
         :expression="currentDialogue.image"

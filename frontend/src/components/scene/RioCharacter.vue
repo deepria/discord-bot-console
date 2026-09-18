@@ -1,12 +1,30 @@
 <script setup lang="ts">
+import { ref, watch } from "vue";
 import type { SceneState } from "../../types/api";
 
-defineProps<{
+const props = defineProps<{
   scene: SceneState;
   expression: string;
   dialogueOpen: boolean;
 }>();
 defineEmits<{ interact: [] }>();
+
+const displayedExpression = ref(props.expression);
+
+watch(
+  () => props.expression,
+  async (expression) => {
+    if (expression === displayedExpression.value) return;
+    const image = new Image();
+    image.src = expression;
+    try {
+      await image.decode();
+    } catch {
+      // The browser will still render the new image when it becomes available.
+    }
+    displayedExpression.value = expression;
+  },
+);
 </script>
 
 <template>
@@ -20,9 +38,7 @@ defineEmits<{ interact: [] }>();
     @click="$emit('interact')"
   >
     <span class="rio-character-motion">
-      <Transition name="rio-expression" mode="out-in">
-        <img :key="expression" class="rio-character" :src="expression" alt="" />
-      </Transition>
+      <img class="rio-character" :src="displayedExpression" alt="" />
     </span>
     <span class="rio-talk-cue" aria-hidden="true">RIO / TALK</span>
   </button>

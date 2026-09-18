@@ -34,13 +34,13 @@ const positions: Record<
   MonitorId,
   { x: number; y: number; width: number; height: number }
 > = {
-  system: { x: 3, y: 22, width: 12, height: 18 },
-  link: { x: 16.5, y: 22, width: 12, height: 18 },
-  runtime: { x: 30, y: 22, width: 12, height: 18 },
-  events: { x: 43.5, y: 22, width: 12, height: 18 },
-  logs: { x: 57, y: 22, width: 12, height: 18 },
-  deploy: { x: 70.5, y: 22, width: 12, height: 18 },
-  control: { x: 85, y: 45, width: 12, height: 14 },
+  system: { x: 1, y: 20, width: 12, height: 39 },
+  link: { x: 13.5, y: 20, width: 12, height: 39 },
+  runtime: { x: 26, y: 20, width: 12, height: 39 },
+  events: { x: 38.5, y: 20, width: 12, height: 39 },
+  logs: { x: 51, y: 20, width: 12, height: 39 },
+  deploy: { x: 63.5, y: 20, width: 12, height: 39 },
+  control: { x: 76, y: 20, width: 23, height: 39 },
 };
 
 const linkLabel = computed(() => props.monitors.link.summary);
@@ -157,9 +157,6 @@ onUnmounted(() => window.clearInterval(clockTimer));
           @close="closeDialogue"
         />
       </Transition>
-      <div class="rio-expression-preload" aria-hidden="true">
-        <img v-for="image in rioExpressions" :key="image" :src="image" alt="" />
-      </div>
     </div>
   </section>
 </template>

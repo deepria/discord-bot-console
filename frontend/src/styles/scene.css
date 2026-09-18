@@ -174,6 +174,13 @@
     transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.monitor-tile {
+  position: absolute;
+  display: block;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
 .monitor-hotspot::before,
 .monitor-hotspot::after {
   position: absolute;
@@ -220,7 +227,13 @@
 
 .monitor-hotspot.severity-alert,
 .monitor-hotspot.severity-attention {
-  border-color: rgba(244, 134, 255, 0.66);
+  box-shadow: 0 0 0 1px rgba(244, 134, 255, 0.78);
+}
+
+.monitor-hotspot.has-badge {
+  box-shadow:
+    0 0 0 1px rgba(244, 134, 255, 0.92),
+    0 0 12px rgba(212, 101, 255, 0.34);
 }
 
 .monitor-label,
@@ -278,30 +291,13 @@
   letter-spacing: 0.12em;
 }
 
-.monitor-badge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  display: grid;
-  min-width: 22px;
-  height: 22px;
-  place-items: center;
-  padding: 0 5px;
-  border: 1px solid #ffc3ff;
-  border-radius: 999px;
-  color: #fff;
-  background: #9b2faa;
-  box-shadow: 0 0 12px rgba(240, 120, 255, 0.65);
-  font: 800 9px/1 var(--font-mono);
-}
-
 .rio-character-button {
   position: absolute;
-  z-index: 4;
+  z-index: 6;
   bottom: 0;
   left: 50%;
-  width: 34%;
-  height: 90%;
+  width: 22%;
+  height: 45%;
   padding: 0;
   border: 0;
   background: transparent;
@@ -311,11 +307,11 @@
 
 .rio-character-motion {
   position: absolute;
-  bottom: -58.9%;
-  left: 0;
+  bottom: -117.8%;
+  left: -27.27%;
   display: block;
-  width: 100%;
-  height: 146.7%;
+  width: 154.55%;
+  height: 293.4%;
   pointer-events: none;
 }
 
@@ -481,12 +477,12 @@
 
   .rio-character-button {
     bottom: 0;
-    height: 90%;
+    height: 45%;
   }
 
   .rio-character-motion {
-    bottom: -97.8%;
-    height: 197.8%;
+    bottom: -195.6%;
+    height: 395.6%;
   }
 
   .rio-briefing {

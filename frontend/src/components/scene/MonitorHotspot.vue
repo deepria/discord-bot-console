@@ -18,7 +18,10 @@ defineEmits<{ select: [id: MonitorStatus["id"]] }>();
   <button
     type="button"
     class="monitor-hotspot"
-    :class="[`severity-${monitor.severity}`, { selected }]"
+    :class="[
+      `severity-${monitor.severity}`,
+      { selected, 'has-badge': Boolean(monitor.badge) },
+    ]"
     :style="{
       left: `${x}%`,
       top: `${y}%`,
@@ -39,11 +42,5 @@ defineEmits<{ select: [id: MonitorStatus["id"]] }>();
       <span class="monitor-summary">{{ monitor.summary }}</span>
       <span class="monitor-action">CLICK TO OPEN</span>
     </span>
-    <b
-      v-if="monitor.badge"
-      class="monitor-badge"
-      :aria-label="`${monitor.badge}개 새 항목`"
-      >{{ monitor.badge }}</b
-    >
   </button>
 </template>

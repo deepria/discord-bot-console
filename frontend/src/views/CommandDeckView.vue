@@ -18,7 +18,16 @@ usePolling(() => store.refreshDeployments(), 10000);
 useLogStream();
 
 function selectMonitor(id: MonitorId): void {
+  if (selectedMonitor.value === id) {
+    void closePanel();
+    return;
+  }
+  office.value?.closeDialogue();
   store.selectMonitor(id);
+}
+
+function dismissPanel(): void {
+  store.selectMonitor(null);
 }
 
 async function closePanel(): Promise<void> {
@@ -39,6 +48,7 @@ async function closePanel(): Promise<void> {
       :message="briefing.message"
       :detail="briefing.detail"
       @select="selectMonitor"
+      @dismiss-panel="dismissPanel"
     />
     <Transition name="panel-slide">
       <MonitorPanel

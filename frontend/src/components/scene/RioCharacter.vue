@@ -1,15 +1,29 @@
 <script setup lang="ts">
 import type { SceneState } from "../../types/api";
-import rio from "../../assets/rio/rio-office-rio.png";
 
-defineProps<{ scene: SceneState }>();
+defineProps<{
+  scene: SceneState;
+  expression: string;
+  dialogueOpen: boolean;
+}>();
+defineEmits<{ interact: [] }>();
 </script>
 
 <template>
-  <img
-    class="rio-character"
+  <button
+    type="button"
+    class="rio-character-button"
     :class="`rio-${scene}`"
-    :src="rio"
-    alt="Rio가 관제실 중앙에서 시스템을 확인하고 있다"
-  />
+    :aria-expanded="dialogueOpen"
+    aria-controls="rio-dialogue"
+    aria-label="Rio와 대화하기"
+    @click="$emit('interact')"
+  >
+    <span class="rio-character-motion">
+      <Transition name="rio-expression" mode="out-in">
+        <img :key="expression" class="rio-character" :src="expression" alt="" />
+      </Transition>
+    </span>
+    <span class="rio-talk-cue" aria-hidden="true">RIO / TALK</span>
+  </button>
 </template>

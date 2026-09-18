@@ -64,7 +64,7 @@ test("opens a monitor and shows live operational data", async ({
   await page.goto("/");
 
   await expect(
-    page.getByText("문제없어. 시스템은 정상적으로 운영 중이야."),
+    page.getByRole("button", { name: "Rio와 대화하기" }),
   ).toBeVisible();
   await page.getByRole("button", { name: /SYSTEM STATUS: ONLINE/ }).click();
   await expect(
@@ -82,6 +82,71 @@ test("opens a monitor and shows live operational data", async ({
   await expect(
     page.getByRole("heading", { name: "SYSTEM STATUS" }),
   ).toBeHidden();
+});
+
+test("opens Rio dialogue and cycles through expressions", async ({
+  page,
+}, testInfo) => {
+  await mockConsole(page);
+  await page.goto("/");
+
+  const rio = page.getByRole("button", { name: "Rio와 대화하기" });
+  const portrait = rio.locator("img");
+  const firstExpression = await portrait.getAttribute("src");
+
+  await rio.click();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  const dialogue = page.getByRole("dialog", { name: "Rio 대화" });
+  await expect(dialogue).toBeVisible();
+  await expect(
+    dialogue.getByText("문제없어. 시스템은 정상적으로 운영 중이야."),
+  ).toBeVisible();
+
+  await dialogue.getByRole("button", { name: "다음 대화 보기" }).click();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(portrait).not.toHaveAttribute("src", firstExpression ?? "");
+  await expect(
+    dialogue.getByText(/관제 데이터는 제가 계속 확인/),
+  ).toBeVisible();
+  await page.waitForTimeout(180);
+  await page.screenshot({
+    path: testInfo.outputPath(`rio-dialogue-${testInfo.project.name}.png`),
+    fullPage: true,
+  });
+
+  await dialogue.getByRole("button", { name: "Rio 대화 닫기" }).click();
+  await expect(dialogue).toBeHidden();
+
+  await rio.click();
+  await expect(dialogue).toBeVisible();
+  const stage = page.locator(".office-stage");
+  const box = await stage.boundingBox();
+  if (!box) throw new Error("Office stage is not visible.");
+  await stage.click({ position: { x: 10, y: box.height - 10 } });
+  await expect(dialogue).toBeHidden();
+});
+
+test("toggles a monitor and dismisses it from the room background", async ({
+  page,
+}) => {
+  await mockConsole(page);
+  await page.goto("/");
+
+  const system = page.getByRole("button", { name: /SYSTEM STATUS: ONLINE/ });
+  const heading = page.getByRole("heading", { name: "SYSTEM STATUS" });
+
+  await system.click();
+  await expect(heading).toBeVisible();
+  await system.click();
+  await expect(heading).toBeHidden();
+
+  await system.click();
+  await expect(heading).toBeVisible();
+  const stage = page.locator(".office-stage");
+  const box = await stage.boundingBox();
+  if (!box) throw new Error("Office stage is not visible.");
+  await stage.click({ position: { x: 10, y: box.height - 10 } });
+  await expect(heading).toBeHidden();
 });
 
 test("uses the alert scene when the bot is offline", async ({ page }) => {

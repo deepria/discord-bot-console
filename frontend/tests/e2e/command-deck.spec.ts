@@ -84,6 +84,24 @@ test("opens a monitor and shows live operational data", async ({
   ).toBeHidden();
 });
 
+test("draws an external leader before revealing monitor guidance", async ({
+  page,
+}, testInfo) => {
+  await mockConsole(page);
+  await page.goto("/");
+
+  const deploy = page.getByRole("button", { name: /DEPLOY WATCH: READY/ });
+  await deploy.hover();
+  await page.waitForTimeout(750);
+  await expect(deploy.locator(".monitor-guidance polygon")).toBeVisible();
+  await expect(deploy.locator(".monitor-guidance path")).toBeVisible();
+  await expect(deploy.locator(".monitor-tooltip")).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath(`monitor-leader-${testInfo.project.name}.png`),
+    fullPage: true,
+  });
+});
+
 test("opens Rio dialogue and cycles through expressions", async ({
   page,
 }, testInfo) => {

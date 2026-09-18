@@ -204,6 +204,7 @@ async function loadStatus() {
         const data = await res.json();
         lastStatus = data;
         renderStatus(data, false);
+        renderStatusEvents(data);
     } catch (e) {
         if (lastStatus) {
             renderStatus(lastStatus, true);
@@ -245,19 +246,13 @@ function renderStatus(data, stale) {
     document.getElementById("connection").className = stale ? "value offline" : "value online";
 }
 
-async function loadEvents() {
-    try {
-        const res = await fetch("/api/status?include_events=true&event_lines=100", {cache: "no-store"});
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        lastEvents = data.events || [];
-        renderEvents(lastEvents);
-    } catch (e) {
-        const message = `Latest event request failed: ${errorMessage(e)}\n`;
-        document.getElementById("events").textContent = lastEvents.length
-            ? message + eventLines(lastEvents).join("\n")
-            : message + "No successful event request is available yet.";
+function renderStatusEvents(data) {
+    if (data.events_error) {
+        document.getElementById("events").textContent = `Latest event request failed: ${data.events_error}`;
+        return;
     }
+    lastEvents = data.events || [];
+    renderEvents(lastEvents);
 }
 
 function eventLines(events) {
@@ -269,15 +264,6 @@ function eventLines(events) {
 
 function renderEvents(events) {
     document.getElementById("events").textContent = eventLines(events).join("\n") || "No events yet";
-}
-
-function errorMessage(error) {
-    try {
-        const value = JSON.parse(error.message);
-        return value.detail || error.message;
-    } catch (_) {
-        return error.message || "unknown error";
-    }
 }
 
 function formatKst(value) {
@@ -369,11 +355,9 @@ async function action(name) {
 
 loadStatus();
 loadLogs();
-loadEvents();
 loadDeployments();
 
 setInterval(loadStatus, 5000);
-setInterval(loadEvents, 5000);
 setInterval(loadDeployments, 10000);
 
 const logBox = document.getElementById("logs");

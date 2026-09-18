@@ -118,21 +118,32 @@
         );
         pointer-events: none;
       }
-      .backdrop {
+      .room-layer {
         position: absolute;
-        inset: 0;
+        left: 0;
         width: 100%;
-        height: 100%;
-        object-fit: cover;
+        object-fit: fill;
         transition: opacity 0.45s ease;
       }
-      .backdrop.alert {
+      .room-layer.ceiling {
+        top: 0;
+        height: 19.58%;
+      }
+      .room-layer.monitor-wall {
+        top: 19.58%;
+        height: 39.04%;
+      }
+      .room-layer.floor {
+        bottom: 0;
+        height: 41.38%;
+      }
+      .room-layer.alert {
         opacity: 0;
       }
-      body[data-scene="alert"] .backdrop.healthy {
+      body[data-scene="alert"] .room-layer.healthy {
         opacity: 0;
       }
-      body[data-scene="alert"] .backdrop.alert {
+      body[data-scene="alert"] .room-layer.alert {
         opacity: 1;
       }
       .rio-layer {
@@ -257,20 +268,52 @@
         z-index: 4;
         display: grid;
         grid-template-columns: 1.1fr 1.1fr 0.85fr 0.85fr;
-        gap: 1px;
-        margin: -1px 14px 0;
+        gap: 8px;
+        margin: -18px 3% 0;
+        padding: 25px 12px 12px;
         border: 1px solid var(--line);
-        background: var(--line);
+        background: linear-gradient(
+          180deg,
+          rgba(var(--accent-rgb), 0.18),
+          rgba(3, 13, 25, 0.94)
+        );
         box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
+        clip-path: polygon(2% 0, 98% 0, 100% 16%, 100% 100%, 0 100%, 0 16%);
+      }
+      .command-deck::before {
+        content: "SEMINAR COMMAND DECK // LIVE TELEMETRY";
+        position: absolute;
+        top: 7px;
+        left: 18px;
+        color: var(--accent);
+        font:
+          10px ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.14em;
       }
       .module {
+        position: relative;
         min-height: 104px;
         padding: 16px;
+        border: 1px solid rgba(var(--accent-rgb), 0.24);
         background: linear-gradient(
           145deg,
           rgba(11, 35, 54, 0.96),
           rgba(5, 17, 30, 0.96)
         );
+        clip-path: polygon(0 0, 96% 0, 100% 11%, 100% 100%, 0 100%);
+      }
+      .module::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 35%;
+        height: 2px;
+        background: var(--accent);
+        box-shadow: 0 0 10px var(--accent);
       }
       .module-label {
         color: var(--muted);
@@ -464,14 +507,34 @@
       </header>
       <section class="office" aria-live="polite">
         <img
-          class="backdrop healthy"
-          src="/static/rio-office-background.png"
+          class="room-layer ceiling healthy"
+          src="/static/office/healthy-ceiling.png"
+          alt=""
+        />
+        <img
+          class="room-layer monitor-wall healthy"
+          src="/static/office/healthy-monitor-wall.png"
           alt="Empty blue-lit control room"
         />
         <img
-          class="backdrop alert"
-          src="/static/rio-office-alert.png"
+          class="room-layer floor healthy"
+          src="/static/office/healthy-floor.png"
+          alt=""
+        />
+        <img
+          class="room-layer ceiling alert"
+          src="/static/office/alert-ceiling.png"
+          alt=""
+        />
+        <img
+          class="room-layer monitor-wall alert"
+          src="/static/office/alert-monitor-wall.png"
           alt="Empty purple-lit alert control room"
+        />
+        <img
+          class="room-layer floor alert"
+          src="/static/office/alert-floor.png"
+          alt=""
         />
         <img
           class="rio-layer"

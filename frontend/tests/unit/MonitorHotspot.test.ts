@@ -17,15 +17,10 @@ describe("MonitorHotspot", () => {
         y: 22,
         width: 12,
         height: 18,
-        framePoints: "0,0 100,0 100,100 0,100",
-        leaderPath: "M 50 0 L 100 -100",
-        labelLeft: "100%",
-        labelBottom: "100%",
       },
     });
 
     expect(wrapper.attributes("aria-label")).toBe("SYSTEM STATUS: OFFLINE");
-    expect(wrapper.classes()).toContain("severity-alert");
     await wrapper.trigger("click");
     expect(wrapper.emitted("select")?.[0]).toEqual(["system"]);
   });

@@ -36,6 +36,10 @@ interface WallTile {
   y: number;
   width: number;
   height: number;
+  framePoints: string;
+  leaderPath: string;
+  labelLeft: string;
+  labelBottom: string;
   monitor: MonitorId;
 }
 
@@ -49,6 +53,10 @@ const positions: WallTile[] = [
     y: 21.49,
     width: 12.38,
     height: 6.7,
+    framePoints: "2,0 98,2 100,98 0,100",
+    leaderPath: "M 45 0 L 76 -135 L 145 -135",
+    labelLeft: "140%",
+    labelBottom: "135%",
   },
   {
     id: "link",
@@ -57,6 +65,10 @@ const positions: WallTile[] = [
     y: 29.25,
     width: 12.38,
     height: 6.7,
+    framePoints: "0,1 100,0 99,100 1,99",
+    leaderPath: "M 45 0 L 82 -235 L 152 -235",
+    labelLeft: "147%",
+    labelBottom: "235%",
   },
   {
     id: "runtime",
@@ -65,6 +77,10 @@ const positions: WallTile[] = [
     y: 37.24,
     width: 12.38,
     height: 6.7,
+    framePoints: "1,0 100,1 99,100 0,99",
+    leaderPath: "M 45 0 L 88 -330 L 158 -330",
+    labelLeft: "153%",
+    labelBottom: "330%",
   },
   {
     id: "events",
@@ -73,6 +89,10 @@ const positions: WallTile[] = [
     y: 45.22,
     width: 12.38,
     height: 6.7,
+    framePoints: "0,1 99,0 100,99 1,100",
+    leaderPath: "M 45 0 L 94 -425 L 164 -425",
+    labelLeft: "159%",
+    labelBottom: "425%",
   },
   {
     id: "logs",
@@ -81,6 +101,10 @@ const positions: WallTile[] = [
     y: 21.49,
     width: 10.53,
     height: 6.7,
+    framePoints: "4,0 100,4 96,100 0,96",
+    leaderPath: "M 50 2 L 112 -145 L 188 -145",
+    labelLeft: "183%",
+    labelBottom: "145%",
   },
   {
     id: "deploy",
@@ -89,6 +113,10 @@ const positions: WallTile[] = [
     y: 29.25,
     width: 10.53,
     height: 6.7,
+    framePoints: "7,0 100,8 93,100 0,92",
+    leaderPath: "M 50 2 L 118 -245 L 194 -245",
+    labelLeft: "189%",
+    labelBottom: "245%",
   },
   {
     id: "control",
@@ -97,6 +125,10 @@ const positions: WallTile[] = [
     y: 37.24,
     width: 10.53,
     height: 6.7,
+    framePoints: "5,0 100,5 96,100 0,95",
+    leaderPath: "M 50 2 L 124 -340 L 200 -340",
+    labelLeft: "195%",
+    labelBottom: "340%",
   },
 ];
 
@@ -199,6 +231,10 @@ onUnmounted(() => window.clearInterval(clockTimer));
           :y="position.y"
           :width="position.width"
           :height="position.height"
+          :frame-points="position.framePoints"
+          :leader-path="position.leaderPath"
+          :label-left="position.labelLeft"
+          :label-bottom="position.labelBottom"
           @select="selectMonitor"
         />
       </nav>

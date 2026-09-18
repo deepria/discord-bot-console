@@ -167,54 +167,36 @@
   --trace-color: var(--accent);
 }
 
-.monitor-trace {
+.monitor-guidance {
   position: absolute;
   inset: -2px;
+  overflow: visible;
   pointer-events: none;
 }
 
-.monitor-trace i {
-  position: absolute;
-  display: block;
-  background: var(--trace-color);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--trace-color) 70%, transparent);
+.monitor-guidance polygon,
+.monitor-guidance path {
+  fill: none;
+  stroke: var(--trace-color);
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.25px;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  filter: drop-shadow(
+    0 0 3px color-mix(in srgb, var(--trace-color) 72%, transparent)
+  );
 }
 
-.monitor-trace i:nth-child(1),
-.monitor-trace i:nth-child(3) {
-  width: 0;
-  height: 1px;
-  transition: width 150ms ease;
+.monitor-guidance polygon {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 400ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.monitor-trace i:nth-child(2),
-.monitor-trace i:nth-child(4) {
-  width: 1px;
-  height: 0;
-  transition: height 150ms ease;
-}
-
-.monitor-trace i:nth-child(1) {
-  top: 0;
-  left: 0;
-}
-
-.monitor-trace i:nth-child(2) {
-  top: 0;
-  right: 0;
-  transition-delay: 150ms;
-}
-
-.monitor-trace i:nth-child(3) {
-  right: 0;
-  bottom: 0;
-  transition-delay: 300ms;
-}
-
-.monitor-trace i:nth-child(4) {
-  bottom: 0;
-  left: 0;
-  transition-delay: 450ms;
+.monitor-guidance path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 260ms 400ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .monitor-hotspot.severity-alert,
@@ -232,22 +214,13 @@
   z-index: 2;
 }
 
-.monitor-hotspot:hover .monitor-trace i:nth-child(1),
-.monitor-hotspot:hover .monitor-trace i:nth-child(3),
-.monitor-hotspot:focus-visible .monitor-trace i:nth-child(1),
-.monitor-hotspot:focus-visible .monitor-trace i:nth-child(3),
-.monitor-hotspot.selected .monitor-trace i:nth-child(1),
-.monitor-hotspot.selected .monitor-trace i:nth-child(3) {
-  width: 100%;
-}
-
-.monitor-hotspot:hover .monitor-trace i:nth-child(2),
-.monitor-hotspot:hover .monitor-trace i:nth-child(4),
-.monitor-hotspot:focus-visible .monitor-trace i:nth-child(2),
-.monitor-hotspot:focus-visible .monitor-trace i:nth-child(4),
-.monitor-hotspot.selected .monitor-trace i:nth-child(2),
-.monitor-hotspot.selected .monitor-trace i:nth-child(4) {
-  height: 100%;
+.monitor-hotspot:hover .monitor-guidance polygon,
+.monitor-hotspot:focus-visible .monitor-guidance polygon,
+.monitor-hotspot.selected .monitor-guidance polygon,
+.monitor-hotspot:hover .monitor-guidance path,
+.monitor-hotspot:focus-visible .monitor-guidance path,
+.monitor-hotspot.selected .monitor-guidance path {
+  stroke-dashoffset: 0;
 }
 
 .monitor-label,
@@ -262,14 +235,14 @@
 
 .monitor-tooltip {
   position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
+  bottom: var(--label-bottom);
+  left: var(--label-left);
   display: grid;
   gap: 3px;
   min-width: max-content;
   max-width: 180px;
   padding: 8px;
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--trace-color);
   background: rgba(1, 10, 19, 0.88);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
   opacity: 0;
@@ -289,7 +262,7 @@
 }
 
 .monitor-label {
-  color: var(--accent);
+  color: var(--trace-color);
   font-size: clamp(7px, 0.55vw, 11px);
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -301,7 +274,7 @@
 }
 
 .monitor-action {
-  color: var(--accent);
+  color: var(--trace-color);
   font: 700 clamp(6px, 0.44vw, 8px)/1 var(--font-mono);
   letter-spacing: 0.12em;
 }

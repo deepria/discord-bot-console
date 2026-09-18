@@ -57,6 +57,11 @@ async function mockConsole(
   );
 }
 
+async function selectFromControlPanel(page: Page, name: RegExp): Promise<void> {
+  await page.getByRole("button", { name: "CONTROL PANEL" }).click();
+  await page.getByRole("button", { name }).click();
+}
+
 test("opens a monitor and shows live operational data", async ({
   page,
 }, testInfo) => {
@@ -66,7 +71,7 @@ test("opens a monitor and shows live operational data", async ({
   await expect(
     page.getByRole("button", { name: "Rio와 대화하기" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /SYSTEM STATUS: ONLINE/ }).click();
+  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
   await expect(
     page.getByRole("heading", { name: "SYSTEM STATUS" }),
   ).toBeVisible();
@@ -84,22 +89,16 @@ test("opens a monitor and shows live operational data", async ({
   ).toBeHidden();
 });
 
-test("connects the hovered monitor corners before revealing its callout", async ({
-  page,
-}, testInfo) => {
+test("opens the lower-left control panel", async ({ page }, testInfo) => {
   await mockConsole(page);
   await page.goto("/");
 
-  const deploy = page.getByRole("button", { name: /DEPLOY WATCH: READY/ });
-  await deploy.hover();
-  await page.waitForTimeout(750);
-  const callout = page.locator(".monitor-callout");
-  await expect(callout).toHaveCount(1);
-  await expect(callout.locator("polygon")).toBeVisible();
-  await expect(callout.locator("path")).toBeVisible();
-  await expect(callout.locator(".monitor-callout-label")).toContainText(
-    "DEPLOY WATCH",
-  );
+  const trigger = page.getByRole("button", { name: "CONTROL PANEL" });
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    page.getByRole("button", { name: /DEPLOY WATCH: READY/ }),
+  ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath(`monitor-leader-${testInfo.project.name}.png`),
     fullPage: true,
@@ -144,7 +143,7 @@ test("opens Rio dialogue and cycles through expressions", async ({
   const stage = page.locator(".office-stage");
   const box = await stage.boundingBox();
   if (!box) throw new Error("Office stage is not visible.");
-  await stage.click({ position: { x: 10, y: box.height - 10 } });
+  await stage.click({ position: { x: box.width - 10, y: box.height - 10 } });
   await expect(dialogue).toBeHidden();
 });
 
@@ -154,20 +153,19 @@ test("toggles a monitor and dismisses it from the room background", async ({
   await mockConsole(page);
   await page.goto("/");
 
-  const system = page.getByRole("button", { name: /SYSTEM STATUS: ONLINE/ });
   const heading = page.getByRole("heading", { name: "SYSTEM STATUS" });
 
-  await system.click();
+  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
   await expect(heading).toBeVisible();
-  await system.click();
+  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
   await expect(heading).toBeHidden();
 
-  await system.click();
+  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
   await expect(heading).toBeVisible();
   const stage = page.locator(".office-stage");
   const box = await stage.boundingBox();
   if (!box) throw new Error("Office stage is not visible.");
-  await stage.click({ position: { x: 10, y: box.height - 10 } });
+  await stage.click({ position: { x: box.width - 10, y: box.height - 10 } });
   await expect(heading).toBeHidden();
 });
 
@@ -179,6 +177,7 @@ test("uses the alert scene when the bot is offline", async ({ page }) => {
     "data-scene",
     "alert",
   );
+  await page.getByRole("button", { name: "CONTROL PANEL" }).click();
   await expect(
     page.getByRole("button", { name: /SYSTEM STATUS: OFFLINE/ }),
   ).toBeVisible();
@@ -188,7 +187,7 @@ test("requires confirmation before stopping the bot", async ({ page }) => {
   await mockConsole(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: /RIO CONTROL: AUTHORIZED/ }).click();
+  await selectFromControlPanel(page, /RIO CONTROL: AUTHORIZED/);
   await page.getByRole("button", { name: /STOP/ }).click();
 
   const dialog = page.getByRole("dialog", { name: "Rio Bot을 중지할까요?" });

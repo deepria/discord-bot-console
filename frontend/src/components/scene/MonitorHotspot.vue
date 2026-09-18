@@ -30,10 +30,13 @@ defineEmits<{ select: [id: MonitorStatus["id"]] }>();
     aria-controls="monitor-panel"
     @click="$emit('select', props.monitor.id)"
   >
-    <span class="monitor-label" :data-short="monitor.id.toUpperCase()">{{
-      monitor.label
-    }}</span>
-    <span class="monitor-summary">{{ monitor.summary }}</span>
+    <span class="monitor-tooltip" role="presentation">
+      <span class="monitor-label" :data-short="monitor.id.toUpperCase()">{{
+        monitor.label
+      }}</span>
+      <span class="monitor-summary">{{ monitor.summary }}</span>
+      <span class="monitor-action">CLICK TO OPEN</span>
+    </span>
     <b
       v-if="monitor.badge"
       class="monitor-badge"

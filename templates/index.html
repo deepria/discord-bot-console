@@ -124,10 +124,16 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: filter 0.5s ease;
+        transition: opacity 0.45s ease;
       }
-      body[data-scene="alert"] .backdrop {
-        filter: hue-rotate(78deg) saturate(1.45) brightness(0.72);
+      .backdrop.alert {
+        opacity: 0;
+      }
+      body[data-scene="alert"] .backdrop.healthy {
+        opacity: 0;
+      }
+      body[data-scene="alert"] .backdrop.alert {
+        opacity: 1;
       }
       .rio-layer {
         position: absolute;
@@ -458,9 +464,14 @@
       </header>
       <section class="office" aria-live="polite">
         <img
-          class="backdrop"
+          class="backdrop healthy"
           src="/static/rio-office-background.png"
           alt="Empty blue-lit control room"
+        />
+        <img
+          class="backdrop alert"
+          src="/static/rio-office-alert.png"
+          alt="Empty purple-lit alert control room"
         />
         <img
           class="rio-layer"

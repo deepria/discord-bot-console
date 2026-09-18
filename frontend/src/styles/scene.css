@@ -160,77 +160,94 @@
   overflow: visible;
   border: 0;
   color: #e8faff;
-  background-color: transparent;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
+  background: transparent;
   cursor: pointer;
   opacity: 1;
   pointer-events: auto;
-  transform-origin: var(--tile-origin, center);
-  transform-style: preserve-3d;
-  will-change: transform;
-  transition:
-    opacity 140ms ease,
-    border-color 140ms ease,
-    background-color 140ms ease,
-    box-shadow 140ms ease,
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  --trace-color: var(--accent);
 }
 
-.monitor-hotspot::before,
-.monitor-hotspot::after {
+.monitor-trace {
   position: absolute;
-  width: 16px;
-  height: 16px;
-  content: "";
-  opacity: 0;
-  transition: opacity 140ms ease;
+  inset: -2px;
+  pointer-events: none;
 }
 
-.monitor-hotspot::before {
-  top: -1px;
-  left: -1px;
-  border-top: 2px solid var(--accent);
-  border-left: 2px solid var(--accent);
+.monitor-trace i {
+  position: absolute;
+  display: block;
+  background: var(--trace-color);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--trace-color) 70%, transparent);
 }
 
-.monitor-hotspot::after {
-  right: -1px;
-  bottom: -1px;
-  border-right: 2px solid var(--accent);
-  border-bottom: 2px solid var(--accent);
+.monitor-trace i:nth-child(1),
+.monitor-trace i:nth-child(3) {
+  width: 0;
+  height: 1px;
+  transition: width 150ms ease;
+}
+
+.monitor-trace i:nth-child(2),
+.monitor-trace i:nth-child(4) {
+  width: 1px;
+  height: 0;
+  transition: height 150ms ease;
+}
+
+.monitor-trace i:nth-child(1) {
+  top: 0;
+  left: 0;
+}
+
+.monitor-trace i:nth-child(2) {
+  top: 0;
+  right: 0;
+  transition-delay: 150ms;
+}
+
+.monitor-trace i:nth-child(3) {
+  right: 0;
+  bottom: 0;
+  transition-delay: 300ms;
+}
+
+.monitor-trace i:nth-child(4) {
+  bottom: 0;
+  left: 0;
+  transition-delay: 450ms;
+}
+
+.monitor-hotspot.severity-alert,
+.monitor-hotspot.severity-attention {
+  --trace-color: #f486ff;
+}
+
+.monitor-hotspot.has-badge {
+  --trace-color: #f486ff;
 }
 
 .monitor-hotspot:hover,
 .monitor-hotspot:focus-visible,
 .monitor-hotspot.selected {
   z-index: 2;
-  opacity: 1;
-  box-shadow:
-    0 0 18px rgba(var(--accent-rgb), 0.46),
-    inset 0 0 16px rgba(var(--accent-rgb), 0.14);
-  transform: perspective(900px) rotateX(var(--tile-tilt-x))
-    rotateY(var(--tile-tilt-y)) translateZ(8px) scale(1.025);
 }
 
-.monitor-hotspot:hover::before,
-.monitor-hotspot:hover::after,
-.monitor-hotspot:focus-visible::before,
-.monitor-hotspot:focus-visible::after,
-.monitor-hotspot.selected::before,
-.monitor-hotspot.selected::after {
-  opacity: 1;
+.monitor-hotspot:hover .monitor-trace i:nth-child(1),
+.monitor-hotspot:hover .monitor-trace i:nth-child(3),
+.monitor-hotspot:focus-visible .monitor-trace i:nth-child(1),
+.monitor-hotspot:focus-visible .monitor-trace i:nth-child(3),
+.monitor-hotspot.selected .monitor-trace i:nth-child(1),
+.monitor-hotspot.selected .monitor-trace i:nth-child(3) {
+  width: 100%;
 }
 
-.monitor-hotspot.severity-alert,
-.monitor-hotspot.severity-attention {
-  box-shadow: 0 0 0 1px rgba(244, 134, 255, 0.78);
-}
-
-.monitor-hotspot.has-badge {
-  box-shadow:
-    0 0 0 1px rgba(244, 134, 255, 0.92),
-    0 0 12px rgba(212, 101, 255, 0.34);
+.monitor-hotspot:hover .monitor-trace i:nth-child(2),
+.monitor-hotspot:hover .monitor-trace i:nth-child(4),
+.monitor-hotspot:focus-visible .monitor-trace i:nth-child(2),
+.monitor-hotspot:focus-visible .monitor-trace i:nth-child(4),
+.monitor-hotspot.selected .monitor-trace i:nth-child(2),
+.monitor-hotspot.selected .monitor-trace i:nth-child(4) {
+  height: 100%;
 }
 
 .monitor-label,
@@ -268,6 +285,7 @@
 .monitor-hotspot.selected .monitor-tooltip {
   opacity: 1;
   transform: translate(-50%, 0) scale(1);
+  transition-delay: 550ms;
 }
 
 .monitor-label {

@@ -199,7 +199,7 @@ function uptime(seconds) {
 
 async function loadStatus() {
     try {
-        const res = await fetch("/api/status");
+        const res = await fetch("/api/status", {cache: "no-store"});
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         lastStatus = data;
@@ -247,7 +247,7 @@ function renderStatus(data, stale) {
 
 async function loadEvents() {
     try {
-        const res = await fetch("/api/events?lines=100");
+        const res = await fetch("/api/events?lines=100", {cache: "no-store"});
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         lastEvents = data.events || [];
@@ -298,7 +298,7 @@ function formatKst(value) {
 
 async function loadLogs() {
     try {
-        const res = await fetch("/api/logs?lines=100");
+        const res = await fetch("/api/logs?lines=100", {cache: "no-store"});
         const data = await res.json();
 
         document.getElementById("logs").textContent =
@@ -334,7 +334,7 @@ function deploymentLine(item) {
 
 async function loadDeployments() {
     try {
-        const res = await fetch("/api/deployments");
+        const res = await fetch("/api/deployments", {cache: "no-store"});
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         const rows = [data.console, ...(data.deployments || [])].filter(Boolean);

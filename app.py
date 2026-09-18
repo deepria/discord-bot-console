@@ -22,6 +22,14 @@ HEADERS = {
 }
 
 
+@app.middleware("http")
+async def prevent_runtime_api_caching(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return response
+
+
 async def agent_get(path: str):
     error = "agent request failed"
     for attempt in range(2):

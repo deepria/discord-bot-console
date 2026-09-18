@@ -20,6 +20,8 @@ describe("MonitorHotspot", () => {
         tile: "/monitor-tile.webp",
         tiltX: -0.5,
         tiltY: 1,
+        frameShape: "polygon(0 0, 100% 0, 100% 100%, 0 100%)",
+        transformOrigin: "center",
       },
     });
 

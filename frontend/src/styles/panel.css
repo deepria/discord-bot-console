@@ -39,6 +39,21 @@
   box-shadow: 0 0 14px var(--accent);
 }
 
+.monitor-panel.is-inline {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  width: min(1200px, 100%);
+  height: min(720px, 76dvh);
+  margin: clamp(16px, 3vw, 38px) auto 28px;
+}
+
+.monitor-panel.is-inline.is-wide {
+  width: min(1200px, 100%);
+}
+
 @media (min-width: 761px) {
   .monitor-panel.is-wide {
     width: clamp(640px, 52vw, 960px);
@@ -437,6 +452,17 @@
     left: 0;
     width: 100%;
     height: min(62dvh, 620px);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    clip-path: none;
+  }
+
+  .monitor-panel.is-inline {
+    position: relative;
+    width: 100%;
+    height: min(680px, 78dvh);
+    margin: 0;
     border-right: 0;
     border-bottom: 0;
     border-left: 0;

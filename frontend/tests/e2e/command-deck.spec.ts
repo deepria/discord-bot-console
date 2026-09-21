@@ -126,6 +126,29 @@ test("keeps office controls readable at tablet and mobile widths", async ({
   expect(boxesOverlap(mobileCard, mobileDock)).toBe(false);
   expect(mobileCard.x).toBeGreaterThanOrEqual(0);
   expect(mobileCard.x + mobileCard.width).toBeLessThanOrEqual(390);
+
+  const rio = page.getByRole("button", { name: "Rio와 대화하기" });
+  const rioBox = await rio.boundingBox();
+  if (!rioBox) throw new Error("Rio is not visible in Office Mode.");
+  expect(rioBox.x + rioBox.width / 2).toBeCloseTo(195, 0);
+  expect(rioBox.y + rioBox.height).toBeLessThan(250);
+});
+
+test("places the Office Mode detail panel below the visual stage", async ({
+  page,
+}) => {
+  await mockConsole(page);
+  await page.goto("/");
+  await switchToOfficeMode(page);
+
+  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
+  const visualStage = page.locator(".office-visual-stage");
+  const panel = page.getByRole("complementary", { name: "SYSTEM STATUS" });
+  await expect(panel).toHaveClass(/is-inline/);
+  const stageBox = await visualStage.boundingBox();
+  const panelBox = await panel.boundingBox();
+  if (!stageBox || !panelBox) throw new Error("Office layout is not visible.");
+  expect(panelBox.y).toBeGreaterThanOrEqual(stageBox.y + stageBox.height);
 });
 
 test("opens a monitor and shows live operational data", async ({

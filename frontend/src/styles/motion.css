@@ -27,6 +27,16 @@
     opacity 220ms ease;
 }
 
+.mode-swap-enter-active,
+.mode-swap-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.mode-swap-enter-from,
+.mode-swap-leave-to {
+  opacity: 0;
+}
+
 .panel-slide-enter-from,
 .panel-slide-leave-to {
   opacity: 0;

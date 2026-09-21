@@ -142,6 +142,24 @@
   );
 }
 
+.office-console-switch {
+  padding: 5px 6px;
+  border: 1px solid rgba(var(--accent-rgb), 0.42);
+  color: var(--accent);
+  background: rgba(1, 12, 23, 0.65);
+  cursor: pointer;
+  font: 800 clamp(6px, 0.44vw, 8px)/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  pointer-events: auto;
+}
+
+.office-console-switch:hover,
+.office-console-switch:focus-visible {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.15);
+  outline: none;
+}
+
 .control-dock {
   position: absolute;
   z-index: 7;

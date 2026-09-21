@@ -25,6 +25,7 @@ const emit = defineEmits<{
   select: [id: MonitorId];
   dismissPanel: [];
   selectLogs: [];
+  console: [];
 }>();
 
 const root = ref<HTMLElement | null>(null);
@@ -144,6 +145,13 @@ onUnmounted(() => window.clearInterval(clockTimer));
         <div class="hud-block status-block">
           <span>{{ time }}</span>
           <strong>{{ linkLabel }}</strong>
+          <button
+            type="button"
+            class="office-console-switch"
+            @click="$emit('console')"
+          >
+            CONSOLE MODE
+          </button>
         </div>
       </header>
       <Transition name="action-card">

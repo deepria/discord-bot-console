@@ -39,6 +39,24 @@
   box-shadow: 0 0 14px var(--accent);
 }
 
+@media (min-width: 761px) {
+  .monitor-panel.is-wide {
+    width: clamp(640px, 52vw, 960px);
+  }
+
+  .monitor-panel.is-wide .event-list li {
+    grid-template-columns: minmax(152px, 0.9fr) minmax(140px, 0.8fr) minmax(
+        0,
+        2.3fr
+      );
+  }
+
+  .monitor-panel.is-wide .log-terminal {
+    padding: 16px;
+    font-size: 12px;
+  }
+}
+
 .monitor-panel-header {
   display: flex;
   align-items: flex-start;

@@ -118,6 +118,30 @@ test("opens a monitor and shows live operational data", async ({
   ).toBeHidden();
 });
 
+test("uses a wider desktop panel for live events and log streams", async ({
+  page,
+}, testInfo) => {
+  await mockConsole(page);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: /LIVE EVENTS: 1 EVENTS/ }).click();
+  const eventsPanel = page.locator("#monitor-panel");
+  await expect(eventsPanel).toHaveClass(/is-wide/);
+  const eventsBox = await eventsPanel.boundingBox();
+  if (testInfo.project.name === "chromium") {
+    expect(eventsBox?.width).toBeGreaterThan(630);
+  } else {
+    expect(eventsBox?.width).toBeLessThanOrEqual(
+      page.viewportSize()?.width ?? 390,
+    );
+  }
+
+  await page.getByRole("button", { name: /LOG STREAM: OPEN/ }).click();
+  await expect(
+    page.getByRole("complementary", { name: "LOG STREAM" }),
+  ).toHaveClass(/is-wide/);
+});
+
 test("opens the lower-left control panel", async ({ page }, testInfo) => {
   await mockConsole(page);
   await page.goto("/");

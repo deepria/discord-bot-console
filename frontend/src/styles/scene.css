@@ -481,6 +481,82 @@
   font: 24px/1 var(--font-ui);
 }
 
+@media (max-width: 1439px) and (min-width: 1024px) {
+  .scene-hud {
+    top: 2%;
+    right: 2%;
+    left: 2%;
+  }
+
+  .hud-block {
+    padding: 7px 9px;
+  }
+
+  .action-card {
+    right: 4%;
+    bottom: 21%;
+    width: min(390px, 35vw);
+  }
+
+  .rio-briefing {
+    right: 22%;
+    left: 14%;
+    min-height: 78px;
+    padding: 13px 16px 12px;
+  }
+}
+
+@media (max-width: 1023px) and (min-width: 761px) {
+  .scene-hud {
+    top: 2%;
+    right: 2%;
+    left: 2%;
+  }
+
+  .hud-block {
+    padding: 7px 8px;
+  }
+
+  .brand-block strong,
+  .status-block > span {
+    display: none;
+  }
+
+  .action-card {
+    right: 3%;
+    bottom: 24%;
+    width: min(360px, 42vw);
+    padding: 12px 13px;
+  }
+
+  .rio-character-button {
+    width: 20%;
+    height: 41%;
+  }
+
+  .rio-briefing {
+    right: 31%;
+    bottom: 5%;
+    left: 6%;
+    min-height: 72px;
+    padding: 11px 14px 10px;
+  }
+
+  .rio-dialogue-main > strong {
+    margin: 6px 0 4px;
+    font-size: clamp(13px, 1.5vw, 17px);
+  }
+
+  .control-dock {
+    bottom: 3.5%;
+    left: 2%;
+  }
+
+  .control-dock-menu {
+    width: min(250px, 34vw);
+  }
+}
+
 @media (max-width: 760px) {
   .office-stage {
     top: 0;
@@ -498,6 +574,53 @@
 
   .hud-block {
     padding: 6px 7px;
+  }
+
+  .brand-block strong,
+  .status-block > span {
+    display: none;
+  }
+
+  .status-block strong {
+    font-size: 7px;
+  }
+
+  .office-console-switch {
+    padding: 4px 5px;
+    font-size: 6px;
+  }
+
+  .action-card {
+    top: 47px;
+    right: 2%;
+    bottom: auto;
+    left: 2%;
+    width: auto;
+    gap: 4px;
+    padding: 7px 8px;
+  }
+
+  .action-card header span,
+  .action-card small {
+    font-size: 6px;
+  }
+
+  .action-card header strong {
+    font-size: 8px;
+  }
+
+  .action-card p {
+    font-size: 9px;
+  }
+
+  .action-card footer {
+    gap: 4px;
+    margin-top: 1px;
+  }
+
+  .action-card button {
+    padding: 5px 6px;
+    font-size: 6px;
   }
 
   .control-dock {
@@ -532,7 +655,9 @@
 
   .rio-character-button {
     bottom: 0;
-    height: 45%;
+    left: 74%;
+    width: 21%;
+    height: 37%;
   }
 
   .rio-character-motion {
@@ -543,7 +668,7 @@
   .rio-briefing {
     right: 4%;
     bottom: 3%;
-    left: 4%;
+    left: 27%;
     min-height: 58px;
     padding: 9px 11px;
   }

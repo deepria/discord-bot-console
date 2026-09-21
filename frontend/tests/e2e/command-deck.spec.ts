@@ -183,6 +183,23 @@ test("uses the alert scene when the bot is offline", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("guides an offline bot investigation from the action card", async ({
+  page,
+}) => {
+  await mockConsole(page, { ...healthy, online: false, pid: null });
+  await page.goto("/");
+
+  const card = page.getByText("BOT SERVICE OFFLINE").locator("..");
+  await expect(card).toBeVisible();
+  await expect(
+    page.getByText("Discord 메시지에 응답할 수 없습니다."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "상세 조사" }).click();
+  await expect(
+    page.getByRole("heading", { name: "SYSTEM STATUS" }),
+  ).toBeVisible();
+});
+
 test("requires confirmation before stopping the bot", async ({ page }) => {
   await mockConsole(page);
   await page.goto("/");

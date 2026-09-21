@@ -6,6 +6,8 @@ import {
   type RioDialogue,
 } from "../../data/rio-dialogues";
 import type { MonitorId, MonitorStatus, SceneState } from "../../types/api";
+import type { Situation } from "../../domain/situation";
+import ActionCard from "../command/ActionCard.vue";
 import RioBriefing from "./RioBriefing.vue";
 import RioCharacter from "./RioCharacter.vue";
 import SceneLayers from "./SceneLayers.vue";
@@ -16,11 +18,13 @@ const props = defineProps<{
   selected: MonitorId | null;
   message: string;
   detail: string;
+  situation: Situation;
 }>();
 
 const emit = defineEmits<{
   select: [id: MonitorId];
   dismissPanel: [];
+  selectLogs: [];
 }>();
 
 const root = ref<HTMLElement | null>(null);
@@ -31,7 +35,12 @@ const dialogueIndex = ref(0);
 const controlMenuOpen = ref(false);
 
 const linkLabel = computed(() => props.monitors.link.summary);
-const controlItems = computed(() => Object.values(props.monitors));
+const controlItems = computed(() =>
+  Object.values(props.monitors).sort((left, right) => {
+    const priority = { alert: 0, attention: 1, normal: 2 } as const;
+    return priority[left.severity] - priority[right.severity];
+  }),
+);
 const currentDialogue = computed<RioDialogue>(() => {
   if (dialogueIndex.value === 0) {
     return {
@@ -85,6 +94,18 @@ function selectMonitor(id: MonitorId): void {
   emit("select", id);
 }
 
+function inspectSituation(): void {
+  if (props.situation.recommendedMonitor) {
+    selectMonitor(props.situation.recommendedMonitor);
+  }
+}
+
+function viewSituationLogs(): void {
+  controlMenuOpen.value = false;
+  closeDialogue();
+  emit("selectLogs");
+}
+
 function dismissFromBackground(event: MouseEvent): void {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -125,6 +146,17 @@ onUnmounted(() => window.clearInterval(clockTimer));
           <strong>{{ linkLabel }}</strong>
         </div>
       </header>
+      <Transition name="action-card">
+        <ActionCard
+          v-if="
+            situation.level === 'action-required' ||
+            situation.level === 'advisory'
+          "
+          :situation="situation"
+          @inspect="inspectSituation"
+          @logs="viewSituationLogs"
+        />
+      </Transition>
       <div class="control-dock">
         <button
           type="button"

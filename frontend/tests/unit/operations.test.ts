@@ -45,6 +45,7 @@ describe("operations store", () => {
     expect(store.scene).toBe("healthy");
     expect(store.monitorStatuses.system.summary).toBe("ONLINE");
     expect(store.status?.runtime?.model).toBe("gpt-test");
+    expect(store.situation.level).toBe("healthy");
   });
 
   it("retains the last good response and marks it stale", async () => {
@@ -60,6 +61,7 @@ describe("operations store", () => {
     expect(store.stale).toBe(true);
     expect(store.scene).toBe("alert");
     expect(store.monitorStatuses.link.severity).toBe("alert");
+    expect(store.situation.recommendedMonitor).toBe("link");
   });
 
   it("counts only events received after initialization", async () => {

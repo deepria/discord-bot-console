@@ -1,6 +1,7 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import { api } from "../services/api";
+import { deriveSituation } from "../domain/situation";
 import type {
   BotStatus,
   ControlAction,
@@ -71,17 +72,21 @@ export const useOperationsStore = defineStore("operations", () => {
     message: "",
   });
 
-  const scene = computed<SceneState>(() => {
-    if (!status.value && !statusError.value) return "loading";
-    if (
-      !status.value ||
-      statusError.value ||
-      stale.value ||
-      !status.value.online
-    )
-      return "alert";
-    return "healthy";
-  });
+  const situation = computed(() =>
+    deriveSituation({
+      hasStatus: Boolean(status.value),
+      statusError: Boolean(statusError.value),
+      stale: stale.value,
+      online: status.value?.online ?? false,
+      eventsError: Boolean(status.value?.events_error),
+      deploymentFailed: deploymentFailed(deployments.value),
+      deploymentsError: Boolean(deploymentsError.value),
+      latencyMs: status.value?.runtime?.latency_ms,
+      latencyWarningMs: LATENCY_WARNING_MS,
+    }),
+  );
+
+  const scene = computed<SceneState>(() => situation.value.scene);
 
   const briefing = computed(() => {
     if (control.value.state === "requesting") {
@@ -105,33 +110,15 @@ export const useOperationsStore = defineStore("operations", () => {
         detail: "AGENT LINK / AWAITING RESPONSE",
       };
     }
-    if (!status.value) {
+    if (situation.value.level !== "healthy") {
       return {
-        message: "관제 데이터에 연결할 수 없어.",
-        detail: "AGENT LINK UNAVAILABLE",
-      };
-    }
-    if (stale.value || statusError.value) {
-      return {
-        message: "응답이 늦어지고 있어. DATA LINK를 먼저 확인해 봐.",
-        detail: "LAST KNOWN STATE / RESPONSE STALE",
-      };
-    }
-    if (!status.value.online) {
-      return {
-        message: "봇이 오프라인이야. SYSTEM STATUS를 확인해 봐.",
-        detail: "BOT SERVICE OFFLINE / CT-101",
-      };
-    }
-    if (status.value.events_error) {
-      return {
-        message: "일부 이벤트 데이터를 받지 못했어. DATA LINK를 확인해 봐.",
-        detail: "PARTIAL AGENT RESPONSE",
+        message: situation.value.reason,
+        detail: situation.value.detail,
       };
     }
     return {
       message: "문제없어. 시스템은 정상적으로 운영 중이야.",
-      detail: `GUILDS ${status.value.runtime?.guild_count ?? "-"} / AGENT LINK ESTABLISHED`,
+      detail: `GUILDS ${status.value?.runtime?.guild_count ?? "-"} / AGENT LINK ESTABLISHED`,
     };
   });
 
@@ -335,6 +322,7 @@ export const useOperationsStore = defineStore("operations", () => {
     unseenLogCount,
     control,
     scene,
+    situation,
     briefing,
     monitorStatuses,
     refreshStatus,

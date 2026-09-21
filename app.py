@@ -163,8 +163,16 @@ async def console_logs_stream():
 @app.get("/{client_path:path}", include_in_schema=False)
 async def frontend(client_path: str):
     """Serve the Vue app for root and client-side routes after API routes."""
-    if client_path.startswith("api/") or Path(client_path).suffix:
+    if client_path.startswith("api/"):
         raise HTTPException(status_code=404, detail="Frontend asset not found.")
+
+    asset_path = (FRONTEND_DIST / client_path).resolve()
+    if asset_path.is_relative_to(FRONTEND_DIST.resolve()) and asset_path.is_file():
+        return FileResponse(asset_path)
+
+    if Path(client_path).suffix:
+        raise HTTPException(status_code=404, detail="Frontend asset not found.")
+
     index_path = FRONTEND_DIST / "index.html"
     if not index_path.is_file():
         raise HTTPException(

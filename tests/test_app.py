@@ -52,6 +52,13 @@ def test_unknown_asset_is_not_rewritten_to_html():
     assert response.status_code == 404
 
 
+def test_existing_frontend_asset_is_served():
+    response = client.get("/favicon.png")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+
+
 def test_unknown_api_route_is_not_rewritten_to_html():
     response = client.get("/api/missing")
 

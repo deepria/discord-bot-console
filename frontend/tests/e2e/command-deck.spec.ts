@@ -132,7 +132,7 @@ test("keeps office controls readable at tablet and mobile widths", async ({
   if (!rioBox) throw new Error("Rio is not visible in Office Mode.");
   expect(rioBox.x + rioBox.width / 2).toBeCloseTo(195, 0);
   expect(rioBox.height).toBeGreaterThan(120);
-  expect(rioBox.y).toBeLessThan(65);
+  expect(rioBox.y).toBeLessThan(50);
   expect(rioBox.y + rioBox.height).toBeLessThan(250);
 });
 

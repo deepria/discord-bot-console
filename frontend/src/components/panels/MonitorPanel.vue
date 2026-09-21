@@ -42,6 +42,7 @@ onMounted(() => panel.value?.focus());
     id="monitor-panel"
     ref="panel"
     class="monitor-panel"
+    :class="{ 'is-wide': current.id === 'logs' || current.id === 'events' }"
     tabindex="-1"
     :aria-labelledby="`panel-title-${current.id}`"
     @keydown.esc="emit('close')"

@@ -9,7 +9,7 @@ import { useOperationsStore } from "../stores/operations";
 import type { MonitorId } from "../types/api";
 
 const store = useOperationsStore();
-const { scene, monitorStatuses, selectedMonitor, briefing } =
+const { scene, situation, monitorStatuses, selectedMonitor, briefing } =
   storeToRefs(store);
 const office = ref<InstanceType<typeof OfficeScene> | null>(null);
 
@@ -30,6 +30,10 @@ function dismissPanel(): void {
   store.selectMonitor(null);
 }
 
+function selectLogs(): void {
+  selectMonitor("logs");
+}
+
 async function closePanel(): Promise<void> {
   const previous = selectedMonitor.value;
   store.selectMonitor(null);
@@ -47,7 +51,9 @@ async function closePanel(): Promise<void> {
       :selected="selectedMonitor"
       :message="briefing.message"
       :detail="briefing.detail"
+      :situation="situation"
       @select="selectMonitor"
+      @select-logs="selectLogs"
       @dismiss-panel="dismissPanel"
     />
     <Transition name="panel-slide">

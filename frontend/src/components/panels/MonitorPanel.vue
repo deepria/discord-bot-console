@@ -34,7 +34,7 @@ const currentComponent = computed(() =>
   selectedMonitor.value ? components[selectedMonitor.value] : null,
 );
 
-onMounted(() => panel.value?.focus());
+onMounted(() => panel.value?.focus({ preventScroll: true }));
 </script>
 
 <template>

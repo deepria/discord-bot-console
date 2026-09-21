@@ -145,6 +145,11 @@ test("places the Office Mode detail panel below the visual stage", async ({
   const visualStage = page.locator(".office-visual-stage");
   const panel = page.getByRole("complementary", { name: "SYSTEM STATUS" });
   await expect(panel).toHaveClass(/is-inline/);
+  await expect
+    .poll(() =>
+      page.locator(".command-deck").evaluate((node) => node.scrollTop),
+    )
+    .toBe(0);
   const stageBox = await visualStage.boundingBox();
   const panelBox = await panel.boundingBox();
   if (!stageBox || !panelBox) throw new Error("Office layout is not visible.");

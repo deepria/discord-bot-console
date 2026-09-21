@@ -69,6 +69,18 @@ async function switchToOfficeMode(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
+function boxesOverlap(
+  first: { x: number; y: number; width: number; height: number },
+  second: { x: number; y: number; width: number; height: number },
+): boolean {
+  return (
+    first.x < second.x + second.width &&
+    first.x + first.width > second.x &&
+    first.y < second.y + second.height &&
+    first.y + first.height > second.y
+  );
+}
+
 test("starts in a practical console mode and preserves office mode", async ({
   page,
 }) => {
@@ -88,6 +100,32 @@ test("starts in a practical console mode and preserves office mode", async ({
   await expect(
     page.getByRole("heading", { name: "SYSTEM HEALTHY" }),
   ).toBeVisible();
+});
+
+test("keeps office controls readable at tablet and mobile widths", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await mockConsole(page, { ...healthy, online: false, pid: null });
+  await page.goto("/");
+  await switchToOfficeMode(page);
+
+  const actionCard = page.locator(".office-stage .action-card");
+  const dock = page.getByRole("button", { name: "CONTROL PANEL" });
+  const tabletCard = await actionCard.boundingBox();
+  const tabletDock = await dock.boundingBox();
+  if (!tabletCard || !tabletDock)
+    throw new Error("Office controls are hidden.");
+  expect(boxesOverlap(tabletCard, tabletDock)).toBe(false);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileCard = await actionCard.boundingBox();
+  const mobileDock = await dock.boundingBox();
+  if (!mobileCard || !mobileDock)
+    throw new Error("Mobile office controls are hidden.");
+  expect(boxesOverlap(mobileCard, mobileDock)).toBe(false);
+  expect(mobileCard.x).toBeGreaterThanOrEqual(0);
+  expect(mobileCard.x + mobileCard.width).toBeLessThanOrEqual(390);
 });
 
 test("opens a monitor and shows live operational data", async ({

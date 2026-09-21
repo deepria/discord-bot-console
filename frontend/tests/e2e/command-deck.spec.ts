@@ -62,11 +62,40 @@ async function selectFromControlPanel(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name }).click();
 }
 
+async function switchToOfficeMode(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "OFFICE MODE" }).click();
+  await expect(
+    page.getByRole("button", { name: "Rio와 대화하기" }),
+  ).toBeVisible();
+}
+
+test("starts in a practical console mode and preserves office mode", async ({
+  page,
+}) => {
+  await mockConsole(page);
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("heading", { name: "SYSTEM HEALTHY" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Rio와 대화하기" }),
+  ).toBeHidden();
+  await expect(page.locator(".office-scene")).toBeHidden();
+
+  await switchToOfficeMode(page);
+  await page.getByRole("button", { name: "CONSOLE MODE" }).click();
+  await expect(
+    page.getByRole("heading", { name: "SYSTEM HEALTHY" }),
+  ).toBeVisible();
+});
+
 test("opens a monitor and shows live operational data", async ({
   page,
 }, testInfo) => {
   await mockConsole(page);
   await page.goto("/");
+  await switchToOfficeMode(page);
 
   await expect(
     page.getByRole("button", { name: "Rio와 대화하기" }),
@@ -92,6 +121,7 @@ test("opens a monitor and shows live operational data", async ({
 test("opens the lower-left control panel", async ({ page }, testInfo) => {
   await mockConsole(page);
   await page.goto("/");
+  await switchToOfficeMode(page);
 
   const trigger = page.getByRole("button", { name: "CONTROL PANEL" });
   await trigger.click();
@@ -110,6 +140,7 @@ test("opens Rio dialogue and cycles through expressions", async ({
 }, testInfo) => {
   await mockConsole(page);
   await page.goto("/");
+  await switchToOfficeMode(page);
 
   const rio = page.getByRole("button", { name: "Rio와 대화하기" });
   const portrait = rio.locator("img");
@@ -152,6 +183,7 @@ test("toggles a monitor and dismisses it from the room background", async ({
 }) => {
   await mockConsole(page);
   await page.goto("/");
+  await switchToOfficeMode(page);
 
   const heading = page.getByRole("heading", { name: "SYSTEM STATUS" });
 
@@ -172,6 +204,7 @@ test("toggles a monitor and dismisses it from the room background", async ({
 test("uses the alert scene when the bot is offline", async ({ page }) => {
   await mockConsole(page, { ...healthy, online: false, pid: null });
   await page.goto("/");
+  await switchToOfficeMode(page);
 
   await expect(page.locator(".command-deck")).toHaveAttribute(
     "data-scene",
@@ -188,6 +221,7 @@ test("guides an offline bot investigation from the action card", async ({
 }) => {
   await mockConsole(page, { ...healthy, online: false, pid: null });
   await page.goto("/");
+  await switchToOfficeMode(page);
 
   const card = page.getByText("BOT SERVICE OFFLINE").locator("..");
   await expect(card).toBeVisible();
@@ -203,6 +237,7 @@ test("guides an offline bot investigation from the action card", async ({
 test("requires confirmation before stopping the bot", async ({ page }) => {
   await mockConsole(page);
   await page.goto("/");
+  await switchToOfficeMode(page);
 
   await selectFromControlPanel(page, /RIO CONTROL: AUTHORIZED/);
   await page.getByRole("button", { name: /STOP/ }).click();

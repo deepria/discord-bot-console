@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref } from "vue";
 import { storeToRefs } from "pinia";
+import ConsoleMode from "../components/console/ConsoleMode.vue";
 import OfficeScene from "../components/scene/OfficeScene.vue";
 import MonitorPanel from "../components/panels/MonitorPanel.vue";
 import { usePolling } from "../composables/usePolling";
@@ -12,6 +13,7 @@ const store = useOperationsStore();
 const { scene, situation, monitorStatuses, selectedMonitor, briefing } =
   storeToRefs(store);
 const office = ref<InstanceType<typeof OfficeScene> | null>(null);
+const mode = ref<"console" | "office">("console");
 
 usePolling(() => store.refreshStatus(), 5000);
 usePolling(() => store.refreshDeployments(), 10000);
@@ -34,6 +36,13 @@ function selectLogs(): void {
   selectMonitor("logs");
 }
 
+function switchMode(nextMode: "console" | "office"): void {
+  if (mode.value === nextMode) return;
+  office.value?.closeDialogue();
+  store.selectMonitor(null);
+  mode.value = nextMode;
+}
+
 async function closePanel(): Promise<void> {
   const previous = selectedMonitor.value;
   store.selectMonitor(null);
@@ -44,18 +53,31 @@ async function closePanel(): Promise<void> {
 
 <template>
   <main class="command-deck" :data-scene="scene">
-    <OfficeScene
-      ref="office"
-      :scene="scene"
-      :monitors="monitorStatuses"
-      :selected="selectedMonitor"
-      :message="briefing.message"
-      :detail="briefing.detail"
-      :situation="situation"
-      @select="selectMonitor"
-      @select-logs="selectLogs"
-      @dismiss-panel="dismissPanel"
-    />
+    <Transition name="mode-swap" mode="out-in">
+      <ConsoleMode
+        v-if="mode === 'console'"
+        :monitors="monitorStatuses"
+        :situation="situation"
+        :status="store.status"
+        :last-status-at="store.lastStatusAt"
+        @select="selectMonitor"
+        @office="switchMode('office')"
+      />
+      <OfficeScene
+        v-else
+        ref="office"
+        :scene="scene"
+        :monitors="monitorStatuses"
+        :selected="selectedMonitor"
+        :message="briefing.message"
+        :detail="briefing.detail"
+        :situation="situation"
+        @select="selectMonitor"
+        @select-logs="selectLogs"
+        @console="switchMode('console')"
+        @dismiss-panel="dismissPanel"
+      />
+    </Transition>
     <Transition name="panel-slide">
       <MonitorPanel
         v-if="selectedMonitor"
@@ -63,7 +85,7 @@ async function closePanel(): Promise<void> {
         @close="closePanel"
       />
     </Transition>
-    <div class="small-status-strip" aria-hidden="true">
+    <div v-if="mode === 'office'" class="small-status-strip" aria-hidden="true">
       <span
         v-for="monitor in monitorStatuses"
         :key="monitor.id"

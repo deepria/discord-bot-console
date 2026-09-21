@@ -665,8 +665,8 @@
 
   .rio-character-button {
     /* Mobile gets its own full-height frame: the desktop crop intentionally
-       focuses on Rio's upper body, whereas a phone should show her down to
-       the thighs without pushing the character off-center. */
+       focuses on Rio's upper body, so the phone view is cropped from the
+       top through the thighs rather than showing the lower legs and boots. */
     bottom: 0;
     left: 50%;
     width: 32%;
@@ -680,9 +680,9 @@
   }
 
   .rio-character {
-    object-position: center bottom;
-    transform: scale(1.13);
-    transform-origin: center bottom;
+    object-position: center top;
+    transform: scale(1.55);
+    transform-origin: center top;
   }
 
   .rio-briefing {

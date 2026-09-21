@@ -50,6 +50,47 @@ button:focus-visible,
   transition: background-color 700ms ease;
 }
 
+.command-deck.is-office-mode {
+  overflow: auto;
+  background: #06131f;
+}
+
+.office-mode-layout {
+  display: grid;
+  width: 100%;
+  min-height: 100%;
+  padding: clamp(16px, 3vw, 48px);
+  background:
+    radial-gradient(
+      circle at 50% 0,
+      rgba(var(--accent-rgb), 0.08),
+      transparent 44%
+    ),
+    #06131f;
+}
+
+.office-visual-stage {
+  position: relative;
+  width: min(100%, 1200px);
+  aspect-ratio: 16 / 9;
+  max-height: min(72dvh, 760px);
+  margin: 0 auto;
+  overflow: hidden;
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.42);
+}
+
+@media (max-width: 760px) {
+  .office-mode-layout {
+    padding: 0;
+  }
+
+  .office-visual-stage {
+    width: 100%;
+    max-height: none;
+    box-shadow: none;
+  }
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

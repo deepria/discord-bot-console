@@ -11,6 +11,7 @@ import LogsPanel from "./LogsPanel.vue";
 import RuntimePanel from "./RuntimePanel.vue";
 import SystemPanel from "./SystemPanel.vue";
 
+defineProps<{ inline?: boolean }>();
 const emit = defineEmits<{ close: [] }>();
 const store = useOperationsStore();
 const { selectedMonitor, monitorStatuses } = storeToRefs(store);
@@ -42,7 +43,10 @@ onMounted(() => panel.value?.focus());
     id="monitor-panel"
     ref="panel"
     class="monitor-panel"
-    :class="{ 'is-wide': current.id === 'logs' || current.id === 'events' }"
+    :class="{
+      'is-wide': current.id === 'logs' || current.id === 'events',
+      'is-inline': inline,
+    }"
     tabindex="-1"
     :aria-labelledby="`panel-title-${current.id}`"
     @keydown.esc="emit('close')"

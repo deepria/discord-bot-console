@@ -52,7 +52,11 @@ async function closePanel(): Promise<void> {
 </script>
 
 <template>
-  <main class="command-deck" :data-scene="scene">
+  <main
+    class="command-deck"
+    :class="{ 'is-office-mode': mode === 'office' }"
+    :data-scene="scene"
+  >
     <Transition name="mode-swap" mode="out-in">
       <ConsoleMode
         v-if="mode === 'console'"
@@ -63,36 +67,38 @@ async function closePanel(): Promise<void> {
         @select="selectMonitor"
         @office="switchMode('office')"
       />
-      <OfficeScene
-        v-else
-        ref="office"
-        :scene="scene"
-        :monitors="monitorStatuses"
-        :selected="selectedMonitor"
-        :message="briefing.message"
-        :detail="briefing.detail"
-        :situation="situation"
-        @select="selectMonitor"
-        @select-logs="selectLogs"
-        @console="switchMode('console')"
-        @dismiss-panel="dismissPanel"
-      />
+      <section v-else class="office-mode-layout">
+        <div class="office-visual-stage">
+          <OfficeScene
+            ref="office"
+            :scene="scene"
+            :monitors="monitorStatuses"
+            :selected="selectedMonitor"
+            :message="briefing.message"
+            :detail="briefing.detail"
+            :situation="situation"
+            @select="selectMonitor"
+            @select-logs="selectLogs"
+            @console="switchMode('console')"
+            @dismiss-panel="dismissPanel"
+          />
+        </div>
+        <Transition name="panel-slide">
+          <MonitorPanel
+            v-if="selectedMonitor"
+            :key="selectedMonitor"
+            inline
+            @close="closePanel"
+          />
+        </Transition>
+      </section>
     </Transition>
     <Transition name="panel-slide">
       <MonitorPanel
-        v-if="selectedMonitor"
+        v-if="selectedMonitor && mode === 'console'"
         :key="selectedMonitor"
         @close="closePanel"
       />
     </Transition>
-    <div v-if="mode === 'office'" class="small-status-strip" aria-hidden="true">
-      <span
-        v-for="monitor in monitorStatuses"
-        :key="monitor.id"
-        :class="`severity-${monitor.severity}`"
-      >
-        {{ monitor.id.toUpperCase() }}
-      </span>
-    </div>
   </main>
 </template>

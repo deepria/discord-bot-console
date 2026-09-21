@@ -129,11 +129,14 @@ test("keeps office controls readable at tablet and mobile widths", async ({
 
   const rio = page.getByRole("button", { name: "Rio와 대화하기" });
   const rioBox = await rio.boundingBox();
-  if (!rioBox) throw new Error("Rio is not visible in Office Mode.");
+  const visualStageBox = await page
+    .locator(".office-visual-stage")
+    .boundingBox();
+  if (!rioBox || !visualStageBox)
+    throw new Error("Rio is not visible in the Office Mode visual stage.");
   expect(rioBox.x + rioBox.width / 2).toBeCloseTo(195, 0);
-  expect(rioBox.height).toBeGreaterThan(120);
-  expect(rioBox.y).toBeLessThan(50);
-  expect(rioBox.y + rioBox.height).toBeLessThan(250);
+  expect(rioBox.height).toBeCloseTo(visualStageBox.height, 0);
+  expect(rioBox.y).toBeCloseTo(visualStageBox.y, 0);
 });
 
 test("places the Office Mode detail panel below the visual stage", async ({

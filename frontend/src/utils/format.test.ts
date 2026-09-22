@@ -25,4 +25,16 @@ describe("formatEventDetails", () => {
       }),
     ).toBe('{"scope":"guild"}');
   });
+
+  it("shows safe provider HTTP diagnostics", () => {
+    expect(
+      formatEventDetails({
+        event: "turn_failed",
+        error_type: "ProviderAPIError",
+        provider: "gemini",
+        provider_http_status: 429,
+        provider_error_code: "RESOURCE_EXHAUSTED",
+      }),
+    ).toBe("GEMINI · HTTP 429 · RESOURCE_EXHAUSTED");
+  });
 });

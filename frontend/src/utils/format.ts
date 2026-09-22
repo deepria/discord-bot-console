@@ -50,7 +50,11 @@ export function formatEventDiagnosis(
   }
   if (error === "ConnectTimeout")
     return "PROVIDER CONNECTION TIMEOUT · API 연결을 완료하지 못했습니다";
-  if (error === "ProviderAPIError")
-    return "PROVIDER API ERROR · usage trace에서 HTTP 상태를 확인하세요";
+  if (error === "ProviderAPIError") {
+    const provider = String(event.provider ?? "PROVIDER").toUpperCase();
+    const status = event.provider_http_status ?? "UNKNOWN";
+    const code = event.provider_error_code;
+    return `${provider} · HTTP ${status}${typeof code === "string" ? ` · ${code}` : ""}`;
+  }
   return typeof error === "string" ? `TURN FAILED · ${error}` : "TURN FAILED";
 }

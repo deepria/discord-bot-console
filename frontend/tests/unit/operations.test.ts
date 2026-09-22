@@ -97,4 +97,23 @@ describe("operations store", () => {
     expect(store.logs[0]).toBe("line-5");
     expect(store.logs.at(-1)).toBe("line-804");
   });
+
+  it("records a control result and its post-check in the current session", async () => {
+    vi.mocked(api.getStatus).mockResolvedValue(healthyStatus);
+    vi.mocked(api.getDeployments).mockResolvedValue({ deployments: [] });
+    vi.mocked(api.getLogs).mockResolvedValue({ logs: ["bot ready"] });
+    vi.mocked(api.control).mockResolvedValue({ ok: true });
+    const store = useOperationsStore();
+
+    await store.refreshStatus();
+    await store.runControl("restart");
+
+    expect(store.control.state).toBe("success");
+    expect(store.controlPostCheck).toBe("healthy");
+    expect(store.operationsHistory).toMatchObject([
+      { kind: "restart", result: "success", postCheck: "healthy" },
+    ]);
+    expect(api.getStatus).toHaveBeenCalledTimes(2);
+    expect(api.getLogs).toHaveBeenCalledTimes(1);
+  });
 });

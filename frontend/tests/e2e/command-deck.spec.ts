@@ -356,3 +356,22 @@ test("requires confirmation before stopping the bot", async ({ page }) => {
     page.getByText(/SUCCESS \/ 봇 중지 요청을 완료했어/),
   ).toBeVisible();
 });
+
+test("opens investigation panels through the keyboard command palette", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === "mobile",
+    "Mobile browsers do not expose a Cmd/Ctrl keyboard shortcut.",
+  );
+  await mockConsole(page);
+  await page.goto("/");
+
+  await page.keyboard.press("ControlOrMeta+K");
+  const palette = page.getByRole("dialog", { name: "명령 팔레트" });
+  await expect(palette).toBeVisible();
+  await palette.getByRole("searchbox", { name: "명령 검색" }).fill("logs");
+  await palette.getByRole("button", { name: "Log Stream 열기" }).click();
+  await expect(palette).toBeHidden();
+  await expect(page.getByRole("heading", { name: "LOG STREAM" })).toBeVisible();
+});

@@ -5,6 +5,7 @@ const props = defineProps<{
   open: boolean;
   title: string;
   description: string;
+  confirmLabel?: string;
 }>();
 const emit = defineEmits<{ confirm: []; cancel: [] }>();
 const dialog = ref<HTMLDialogElement | null>(null);
@@ -51,7 +52,7 @@ onBeforeUnmount(() => dialog.value?.close());
         autofocus
         @click="$emit('confirm')"
       >
-        중지 실행
+        {{ confirmLabel ?? "실행" }}
       </button>
     </div>
   </dialog>

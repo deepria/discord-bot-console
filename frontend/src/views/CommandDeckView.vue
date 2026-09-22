@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { nextTick, ref } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import ConsoleMode from "../components/console/ConsoleMode.vue";
 import OfficeScene from "../components/scene/OfficeScene.vue";
 import MonitorPanel from "../components/panels/MonitorPanel.vue";
+import CommandPalette from "../components/command/CommandPalette.vue";
 import { usePolling } from "../composables/usePolling";
 import { useLogStream } from "../composables/useLogStream";
 import { useOperationsStore } from "../stores/operations";
@@ -14,6 +15,8 @@ const { scene, situation, monitorStatuses, selectedMonitor, briefing } =
   storeToRefs(store);
 const office = ref<InstanceType<typeof OfficeScene> | null>(null);
 const mode = ref<"console" | "office">("console");
+const paletteOpen = ref(false);
+let paletteTrigger: HTMLElement | null = null;
 
 usePolling(() => store.refreshStatus(), 5000);
 usePolling(() => store.refreshDeployments(), 10000);
@@ -36,6 +39,30 @@ function selectLogs(): void {
   selectMonitor("logs");
 }
 
+function openPalette(): void {
+  paletteTrigger =
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+  paletteOpen.value = true;
+}
+
+function closePalette(): void {
+  paletteOpen.value = false;
+  void nextTick(() => paletteTrigger?.focus());
+}
+
+function onGlobalKeydown(event: KeyboardEvent): void {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    if (paletteOpen.value) closePalette();
+    else openPalette();
+  }
+}
+
+onMounted(() => window.addEventListener("keydown", onGlobalKeydown));
+onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+
 function switchMode(nextMode: "console" | "office"): void {
   if (mode.value === nextMode) return;
   office.value?.closeDialogue();
@@ -57,6 +84,14 @@ async function closePanel(): Promise<void> {
     :class="{ 'is-office-mode': mode === 'office' }"
     :data-scene="scene"
   >
+    <button
+      class="palette-trigger"
+      type="button"
+      aria-label="명령 팔레트 열기"
+      @click="openPalette"
+    >
+      ⌘ K
+    </button>
     <Transition name="mode-swap" mode="out-in">
       <ConsoleMode
         v-if="mode === 'console'"
@@ -100,5 +135,10 @@ async function closePanel(): Promise<void> {
         @close="closePanel"
       />
     </Transition>
+    <CommandPalette
+      :open="paletteOpen"
+      @close="closePalette"
+      @select="selectMonitor"
+    />
   </main>
 </template>

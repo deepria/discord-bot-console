@@ -12,11 +12,14 @@ import type {
   MonitorStatus,
   RuntimeEvent,
   SceneState,
+  OperationRecord,
+  PostCheckState,
 } from "../types/api";
 
 const LATENCY_WARNING_MS = 500;
 const MAX_LOG_LINES = 800;
 const MAX_KNOWN_EVENTS = 500;
+const MAX_OPERATION_HISTORY = 20;
 
 function eventKey(event: RuntimeEvent): string {
   const identifiers = [
@@ -71,6 +74,8 @@ export const useOperationsStore = defineStore("operations", () => {
     state: "idle",
     message: "",
   });
+  const controlPostCheck = ref<PostCheckState>("idle");
+  const operationsHistory = ref<OperationRecord[]>([]);
 
   const situation = computed(() =>
     deriveSituation({
@@ -278,6 +283,7 @@ export const useOperationsStore = defineStore("operations", () => {
   async function runControl(action: ControlAction): Promise<boolean> {
     if (control.value.state === "requesting") return false;
     control.value = { action, state: "requesting", message: "" };
+    controlPostCheck.value = "pending";
     try {
       await api.control(action);
       control.value = {
@@ -288,9 +294,24 @@ export const useOperationsStore = defineStore("operations", () => {
             ? "봇 중지 요청을 완료했어."
             : `${action === "start" ? "시작" : "재시작"} 요청을 완료했어.`,
       };
-      window.setTimeout(() => {
-        void refreshStatus();
-      }, 800);
+      await Promise.all([refreshStatus(), refreshDeployments(), refreshLogs()]);
+      const postCheckHealthy =
+        action === "stop"
+          ? status.value?.online === false
+          : status.value?.online === true;
+      controlPostCheck.value = postCheckHealthy ? "healthy" : "failed";
+      const successfulOperation: OperationRecord = {
+        id: crypto.randomUUID(),
+        kind: action,
+        requestedAt: new Date().toISOString(),
+        result: "success",
+        postCheck: controlPostCheck.value,
+        relatedMonitor: "control",
+      };
+      operationsHistory.value = [
+        successfulOperation,
+        ...operationsHistory.value,
+      ].slice(0, MAX_OPERATION_HISTORY);
       return true;
     } catch (error) {
       control.value = {
@@ -301,7 +322,28 @@ export const useOperationsStore = defineStore("operations", () => {
             ? `작업에 실패했어: ${error.message}`
             : "작업에 실패했어.",
       };
+      controlPostCheck.value = "failed";
+      const failedOperation: OperationRecord = {
+        id: crypto.randomUUID(),
+        kind: action,
+        requestedAt: new Date().toISOString(),
+        result: "failure",
+        postCheck: "failed",
+        relatedMonitor: "control",
+      };
+      operationsHistory.value = [
+        failedOperation,
+        ...operationsHistory.value,
+      ].slice(0, MAX_OPERATION_HISTORY);
       return false;
+    }
+  }
+
+  async function refreshLogs(): Promise<void> {
+    try {
+      replaceLogs((await api.getLogs()).logs);
+    } catch {
+      // The status result remains the source of truth when logs are unavailable.
     }
   }
 
@@ -321,12 +363,15 @@ export const useOperationsStore = defineStore("operations", () => {
     followingLogs,
     unseenLogCount,
     control,
+    controlPostCheck,
+    operationsHistory,
     scene,
     situation,
     briefing,
     monitorStatuses,
     refreshStatus,
     refreshDeployments,
+    refreshLogs,
     selectMonitor,
     replaceLogs,
     appendLog,

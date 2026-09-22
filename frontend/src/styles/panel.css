@@ -283,6 +283,21 @@
   gap: 6px;
 }
 
+.policy-list {
+  display: grid;
+  gap: 6px;
+}
+.policy-list article {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  font: 700 9px/1.4 var(--font-mono);
+}
+.policy-list span {
+  color: var(--muted);
+}
+
 .settings-actions button,
 .settings-editor button {
   font: 700 9px/1 var(--font-mono);

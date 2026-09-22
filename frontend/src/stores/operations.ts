@@ -13,6 +13,7 @@ import type {
   RuntimeEvent,
   RuntimeConfigAuditEvent,
   RuntimeSetting,
+  PolicySetting,
   SceneState,
   OperationRecord,
   PostCheckState,
@@ -88,6 +89,9 @@ export const useOperationsStore = defineStore("operations", () => {
   const runtimeConfigAuditLoading = ref(false);
   const runtimeSettingPending = ref<string | null>(null);
   const runtimeSettingResult = ref<string | null>(null);
+  const policySettings = ref<PolicySetting[]>([]);
+  const policySettingsError = ref<string | null>(null);
+  const policySettingsLoading = ref(false);
 
   const situation = computed(() =>
     deriveSituation({
@@ -305,6 +309,22 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
+  async function refreshPolicySettings(): Promise<void> {
+    if (policySettingsLoading.value) return;
+    policySettingsLoading.value = true;
+    try {
+      policySettings.value = (await api.getPolicySettings()).policies;
+      policySettingsError.value = null;
+    } catch (error) {
+      policySettingsError.value =
+        error instanceof Error
+          ? error.message
+          : "Policy settings request failed.";
+    } finally {
+      policySettingsLoading.value = false;
+    }
+  }
+
   async function writeRuntimeSetting(
     key: string,
     value: string | null,
@@ -449,6 +469,9 @@ export const useOperationsStore = defineStore("operations", () => {
     runtimeConfigAuditLoading,
     runtimeSettingPending,
     runtimeSettingResult,
+    policySettings,
+    policySettingsError,
+    policySettingsLoading,
     scene,
     situation,
     briefing,
@@ -457,6 +480,7 @@ export const useOperationsStore = defineStore("operations", () => {
     refreshDeployments,
     refreshRuntimeSettings,
     refreshRuntimeConfigAuditEvents,
+    refreshPolicySettings,
     writeRuntimeSetting,
     refreshLogs,
     selectMonitor,

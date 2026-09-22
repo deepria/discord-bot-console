@@ -349,6 +349,11 @@ async def runtime_settings():
     return await agent_get("/settings/runtime")
 
 
+@app.get("/api/settings/policies")
+async def policy_settings():
+    return await agent_get("/settings/policies")
+
+
 @app.put("/api/settings/runtime/{key}")
 async def set_runtime_setting(key: str, write: RuntimeSettingWrite, request: Request):
     actor = require_admin(request)

@@ -13,6 +13,8 @@ import type {
   RuntimeSettingKind,
   RuntimeSettingsResponse,
   RuntimeSettingWriteResult,
+  PolicySetting,
+  PolicySettingsResponse,
   RuntimeStatus,
 } from "../types/api";
 
@@ -170,6 +172,36 @@ function parseRuntimeSettings(value: unknown): RuntimeSettingsResponse {
   return { settings };
 }
 
+function parsePolicies(value: unknown): PolicySettingsResponse {
+  if (!isRecord(value) || !Array.isArray(value.policies))
+    throw new ApiError("Policy settings response is invalid.");
+  const fields = [
+    "scope",
+    "memory_override",
+    "memory_effective",
+    "memory_source",
+    "chatlog_override",
+    "chatlog_effective",
+    "chatlog_source",
+    "capture_override",
+    "capture_effective",
+    "capture_source",
+  ] as const;
+  const policies = value.policies.map((item) => {
+    if (
+      !isRecord(item) ||
+      !fields.every((field) => typeof item[field] === "string")
+    )
+      throw new ApiError(
+        "Policy settings response contains an invalid policy.",
+      );
+    return Object.fromEntries(
+      fields.map((field) => [field, item[field]]),
+    ) as unknown as PolicySetting;
+  });
+  return { policies };
+}
+
 function parseRuntimeSettingWriteResult(
   value: unknown,
 ): RuntimeSettingWriteResult {
@@ -287,6 +319,9 @@ export const api = {
   },
   async getRuntimeSettings(): Promise<RuntimeSettingsResponse> {
     return parseRuntimeSettings(await requestJson("/api/settings/runtime"));
+  },
+  async getPolicySettings(): Promise<PolicySettingsResponse> {
+    return parsePolicies(await requestJson("/api/settings/policies"));
   },
   async setRuntimeSetting(
     key: string,

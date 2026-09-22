@@ -36,7 +36,7 @@ export function formatEventDiagnosis(event: Record<string, unknown>): string | n
   if (event.event !== "turn_failed") return null;
   const error = event.error_type;
   if (error === "ReadTimeout") {
-    return "PROVIDER RESPONSE TIMEOUT · 모델 응답이 client timeout 안에 도착하지 않았습니다";
+    return `${String(event.provider ?? "PROVIDER").toUpperCase()} · ${String(event.timeout_phase ?? "read").toUpperCase()} TIMEOUT`;
   }
   if (error === "ConnectTimeout") return "PROVIDER CONNECTION TIMEOUT · API 연결을 완료하지 못했습니다";
   if (error === "ProviderAPIError") return "PROVIDER API ERROR · usage trace에서 HTTP 상태를 확인하세요";

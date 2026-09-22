@@ -4,8 +4,8 @@ import { formatEventDetails } from "./format";
 
 describe("formatEventDetails", () => {
   it("explains provider read timeouts without exposing Discord identifiers", () => {
-    expect(formatEventDetails({ event: "turn_failed", error_type: "ReadTimeout", user_id: "secret" }))
-      .toContain("PROVIDER RESPONSE TIMEOUT");
+    expect(formatEventDetails({ event: "turn_failed", error_type: "ReadTimeout", provider: "gemini", timeout_phase: "read", user_id: "secret" }))
+      .toBe("GEMINI · READ TIMEOUT");
   });
 
   it("removes Discord identifiers from ordinary event details", () => {

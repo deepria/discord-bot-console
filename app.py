@@ -44,6 +44,11 @@ class OAuthConfig(BaseModel):
     session_secret: str
 
 
+class RuntimeSettingWrite(BaseModel):
+    value: str
+    request_id: str
+
+
 def oauth_config() -> OAuthConfig | None:
     values = {
         "client_id": os.getenv("RIO_CONSOLE_DISCORD_CLIENT_ID", "").strip(),
@@ -149,6 +154,29 @@ async def agent_post(path: str, payload: dict | None = None):
         raise HTTPException(status_code=502, detail=f"Agent error: {response.text}")
 
     return response.json()
+
+
+async def agent_write(method: str, path: str, payload: dict):
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            response = await client.request(method, f"{AGENT_URL}{path}", headers=HEADERS, json=payload)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Runtime settings agent is unavailable") from exc
+    if response.is_success:
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail="Runtime settings agent returned invalid JSON") from exc
+    if response.status_code in {400, 401, 403}:
+        try:
+            detail = response.json().get("detail")
+        except ValueError:
+            detail = None
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=detail if isinstance(detail, str) and len(detail) <= 300 else "Runtime settings request failed",
+        )
+    raise HTTPException(status_code=502, detail="Runtime settings agent request failed")
 
 
 @app.get("/auth/discord/login")
@@ -319,6 +347,24 @@ async def deployments():
 @app.get("/api/settings/runtime")
 async def runtime_settings():
     return await agent_get("/settings/runtime")
+
+
+@app.put("/api/settings/runtime/{key}")
+async def set_runtime_setting(key: str, write: RuntimeSettingWrite, request: Request):
+    actor = require_admin(request)
+    return await agent_write(
+        "PUT", f"/settings/runtime/{key}",
+        {"value": write.value, "request_id": write.request_id, "actor_id": actor["id"]},
+    )
+
+
+@app.delete("/api/settings/runtime/{key}")
+async def reset_runtime_setting(key: str, write: RuntimeSettingWrite, request: Request):
+    actor = require_admin(request)
+    return await agent_write(
+        "DELETE", f"/settings/runtime/{key}",
+        {"request_id": write.request_id, "actor_id": actor["id"]},
+    )
 
 
 @app.get("/api/settings/audit-events")

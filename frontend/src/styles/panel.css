@@ -239,7 +239,7 @@
 
 .settings-list article {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(100px, auto) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, auto) auto auto;
   align-items: center;
   gap: 12px;
   padding: 11px 12px;
@@ -277,6 +277,24 @@
   color: var(--accent);
 }
 
+.settings-actions,
+.settings-editor > div {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-actions button,
+.settings-editor button {
+  font: 700 9px/1 var(--font-mono);
+}
+
+.settings-editor {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
+}
+
 @media (max-width: 540px) {
   .settings-panel {
     width: min(100%, 100vw);
@@ -287,6 +305,10 @@
   }
 
   .settings-list span {
+    grid-column: 1 / -1;
+  }
+
+  .settings-actions {
     grid-column: 1 / -1;
   }
 }

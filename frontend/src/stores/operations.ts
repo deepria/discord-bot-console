@@ -92,6 +92,7 @@ export const useOperationsStore = defineStore("operations", () => {
   const policySettings = ref<PolicySetting[]>([]);
   const policySettingsError = ref<string | null>(null);
   const policySettingsLoading = ref(false);
+  const policySettingPending = ref<string | null>(null);
 
   const situation = computed(() =>
     deriveSituation({
@@ -325,6 +326,22 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
+  async function writePolicySetting(
+    policy: string,
+    scope: string,
+    value: string,
+  ): Promise<boolean> {
+    if (policySettingPending.value) return false;
+    policySettingPending.value = `${policy}:${scope}`;
+    try {
+      await api.setPolicySetting(policy, scope, value);
+      await refreshPolicySettings();
+      return true;
+    } finally {
+      policySettingPending.value = null;
+    }
+  }
+
   async function writeRuntimeSetting(
     key: string,
     value: string | null,
@@ -472,6 +489,7 @@ export const useOperationsStore = defineStore("operations", () => {
     policySettings,
     policySettingsError,
     policySettingsLoading,
+    policySettingPending,
     scene,
     situation,
     briefing,
@@ -481,6 +499,7 @@ export const useOperationsStore = defineStore("operations", () => {
     refreshRuntimeSettings,
     refreshRuntimeConfigAuditEvents,
     refreshPolicySettings,
+    writePolicySetting,
     writeRuntimeSetting,
     refreshLogs,
     selectMonitor,

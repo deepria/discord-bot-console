@@ -68,3 +68,14 @@ export interface ControlResult {
   state: RequestState;
   message: string;
 }
+
+export type PostCheckState = "idle" | "pending" | "healthy" | "failed";
+
+export interface OperationRecord {
+  id: string;
+  kind: ControlAction;
+  requestedAt: string;
+  result: Exclude<RequestState, "idle" | "requesting">;
+  postCheck: Exclude<PostCheckState, "idle">;
+  relatedMonitor: "control";
+}

@@ -1,4 +1,5 @@
 import os
+import time
 
 os.environ.setdefault("RIO_AGENT_TOKEN", "test-token")
 
@@ -31,10 +32,21 @@ def test_control_route_preserves_agent_contract(monkeypatch):
         return {"ok": True, "path": path}
 
     monkeypatch.setattr(app_module, "agent_post", fake_agent_post)
+    monkeypatch.setattr(
+        app_module,
+        "session_actor",
+        lambda request: {"id": "123456789012345678", "role": "admin"},
+    )
     response = client.post("/api/bot/restart")
 
     assert response.status_code == 200
     assert response.json() == {"ok": True, "path": "/bot/restart"}
+
+
+def test_control_route_rejects_anonymous_requests():
+    response = client.post("/api/bot/restart")
+
+    assert response.status_code == 401
 
 
 def test_runtime_settings_route_preserves_agent_contract(monkeypatch):
@@ -61,6 +73,50 @@ def test_runtime_audit_route_preserves_agent_contract(monkeypatch):
     assert response.status_code == 200
     assert response.json()["events"][0]["target"] == "CHAT_WEB_SEARCH"
     assert response.headers["cache-control"].startswith("no-store")
+
+
+def _configure_discord_oauth(monkeypatch):
+    monkeypatch.setenv("RIO_CONSOLE_DISCORD_CLIENT_ID", "123456789012345678")
+    monkeypatch.setenv("RIO_CONSOLE_DISCORD_CLIENT_SECRET", "client-secret")
+    monkeypatch.setenv(
+        "RIO_CONSOLE_DISCORD_REDIRECT_URI",
+        "https://console.example/auth/discord/callback",
+    )
+    monkeypatch.setenv("RIO_CONSOLE_SESSION_SECRET", "s" * 32)
+    monkeypatch.setenv("RIO_CONSOLE_SESSION_COOKIE_SECURE", "false")
+
+
+def test_discord_login_redirects_with_signed_state(monkeypatch):
+    _configure_discord_oauth(monkeypatch)
+
+    response = client.get("/auth/discord/login", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["location"].startswith(app_module.DISCORD_OAUTH_AUTHORIZE_URL)
+    assert "scope=identify" in response.headers["location"]
+    assert app_module.OAUTH_STATE_COOKIE in response.headers["set-cookie"]
+
+
+def test_auth_me_reads_only_a_valid_signed_session(monkeypatch):
+    _configure_discord_oauth(monkeypatch)
+    session = app_module._signed_value(
+        {
+            "purpose": "session",
+            "id": "123456789012345678",
+            "role": "admin",
+            "expires_at": int(time.time()) + 60,
+        },
+        "s" * 32,
+    )
+    client.cookies.set(app_module.SESSION_COOKIE, session)
+
+    response = client.get("/api/auth/me")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "oauth_enabled": True,
+        "actor": {"id": "123456789012345678", "role": "admin"},
+    }
 
 
 def test_vue_history_fallback_uses_the_built_index():

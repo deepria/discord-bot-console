@@ -36,6 +36,27 @@ python -m venv .venv
 RIO_AGENT_TOKEN=... .venv/bin/uvicorn app:app --reload --port 8000
 ```
 
+### Discord login for control actions
+
+Read-only views work without a login. Bot `START`, `RESTART`, and `STOP` require
+Discord OAuth and a Discord user ID present in the Bot's existing `BOT_ADMIN_IDS`.
+The Console does not maintain a separate administrator list.
+
+Configure these values in the Console service environment and register the exact
+callback URL in the Discord Developer Portal under OAuth2 redirects:
+
+```bash
+RIO_CONSOLE_DISCORD_CLIENT_ID=...
+RIO_CONSOLE_DISCORD_CLIENT_SECRET=...
+RIO_CONSOLE_DISCORD_REDIRECT_URI=https://console.example/auth/discord/callback
+RIO_CONSOLE_SESSION_SECRET=<at-least-32-random-characters>
+RIO_CONSOLE_SESSION_COOKIE_SECURE=true
+```
+
+Set `RIO_CONSOLE_SESSION_COOKIE_SECURE=false` only for local HTTP development.
+The browser receives an HttpOnly, signed eight-hour session cookie; Discord OAuth
+access tokens, the client secret, and `RIO_AGENT_TOKEN` are never exposed to it.
+
 Run Vite in a second terminal. It proxies `/api` to port 8000.
 
 ```bash

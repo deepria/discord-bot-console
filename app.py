@@ -1,12 +1,18 @@
 import asyncio
+import base64
+import hmac
 import json
-import httpx
 import os
+import secrets
+import time
 from pathlib import Path
+from urllib.parse import urlencode
 
+import httpx
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 app = FastAPI(title="Rio Control Center")
 APP_ROOT = Path(__file__).resolve().parent
@@ -24,6 +30,91 @@ LOCAL_DEPLOY_STATUS_PATH = Path(
 )
 
 HEADERS = {"Authorization": f"Bearer {AGENT_TOKEN}"}
+DISCORD_OAUTH_AUTHORIZE_URL = "https://discord.com/api/oauth2/authorize"
+DISCORD_OAUTH_TOKEN_URL = "https://discord.com/api/oauth2/token"
+DISCORD_API_USER_URL = "https://discord.com/api/users/@me"
+OAUTH_STATE_COOKIE = "rio_console_oauth_state"
+SESSION_COOKIE = "rio_console_session"
+
+
+class OAuthConfig(BaseModel):
+    client_id: str
+    client_secret: str
+    redirect_uri: str
+    session_secret: str
+
+
+def oauth_config() -> OAuthConfig | None:
+    values = {
+        "client_id": os.getenv("RIO_CONSOLE_DISCORD_CLIENT_ID", "").strip(),
+        "client_secret": os.getenv("RIO_CONSOLE_DISCORD_CLIENT_SECRET", "").strip(),
+        "redirect_uri": os.getenv("RIO_CONSOLE_DISCORD_REDIRECT_URI", "").strip(),
+        "session_secret": os.getenv("RIO_CONSOLE_SESSION_SECRET", "").strip(),
+    }
+    if not any(values.values()):
+        return None
+    if not all(values.values()) or len(values["session_secret"]) < 32:
+        raise HTTPException(status_code=503, detail="Discord OAuth is misconfigured")
+    return OAuthConfig(**values)
+
+
+def secure_cookie() -> bool:
+    return os.getenv("RIO_CONSOLE_SESSION_COOKIE_SECURE", "true").lower() not in {
+        "0",
+        "false",
+        "no",
+    }
+
+
+def _signed_value(payload: dict[str, object], secret: str) -> str:
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    ).rstrip(b"=")
+    signature = hmac.digest(secret.encode("utf-8"), encoded, "sha256")
+    return f"{encoded.decode('ascii')}.{base64.urlsafe_b64encode(signature).rstrip(b'=').decode('ascii')}"
+
+
+def _verified_value(value: str | None, secret: str) -> dict[str, object] | None:
+    if not value or "." not in value:
+        return None
+    encoded, supplied_signature = value.rsplit(".", 1)
+    expected_signature = base64.urlsafe_b64encode(
+        hmac.digest(secret.encode("utf-8"), encoded.encode("ascii"), "sha256")
+    ).rstrip(b"=").decode("ascii")
+    if not hmac.compare_digest(supplied_signature, expected_signature):
+        return None
+    try:
+        padding = "=" * (-len(encoded) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(f"{encoded}{padding}"))
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def session_actor(request: Request) -> dict[str, str] | None:
+    config = oauth_config()
+    if config is None:
+        return None
+    payload = _verified_value(request.cookies.get(SESSION_COOKIE), config.session_secret)
+    if (
+        not payload
+        or payload.get("purpose") != "session"
+        or not isinstance(payload.get("id"), str)
+        or payload.get("role") not in {"viewer", "admin"}
+        or not isinstance(payload.get("expires_at"), int)
+        or payload["expires_at"] < int(time.time())
+    ):
+        return None
+    return {"id": payload["id"], "role": payload["role"]}
+
+
+def require_admin(request: Request) -> dict[str, str]:
+    actor = session_actor(request)
+    if actor is None:
+        raise HTTPException(status_code=401, detail="Discord login is required")
+    if actor["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Discord bot administrator access is required")
+    return actor
 
 
 @app.middleware("http")
@@ -50,14 +141,118 @@ async def agent_get(path: str):
     raise HTTPException(status_code=502, detail=error)
 
 
-async def agent_post(path: str):
+async def agent_post(path: str, payload: dict | None = None):
     async with httpx.AsyncClient(timeout=20) as client:
-        response = await client.post(f"{AGENT_URL}{path}", headers=HEADERS)
+        response = await client.post(f"{AGENT_URL}{path}", headers=HEADERS, json=payload)
 
     if response.status_code >= 400:
         raise HTTPException(status_code=502, detail=f"Agent error: {response.text}")
 
     return response.json()
+
+
+@app.get("/auth/discord/login")
+async def discord_login():
+    config = oauth_config()
+    if config is None:
+        raise HTTPException(status_code=503, detail="Discord OAuth is not configured")
+    state = secrets.token_urlsafe(32)
+    response = RedirectResponse(
+        f"{DISCORD_OAUTH_AUTHORIZE_URL}?{urlencode({'client_id': config.client_id, 'redirect_uri': config.redirect_uri, 'response_type': 'code', 'scope': 'identify', 'state': state})}",
+        status_code=302,
+    )
+    response.set_cookie(
+        OAUTH_STATE_COOKIE,
+        _signed_value(
+            {"purpose": "oauth_state", "state": state, "expires_at": int(time.time()) + 300},
+            config.session_secret,
+        ),
+        httponly=True,
+        secure=secure_cookie(),
+        samesite="lax",
+        max_age=300,
+        path="/auth/discord",
+    )
+    return response
+
+
+@app.get("/auth/discord/callback")
+async def discord_callback(code: str, state: str, request: Request):
+    config = oauth_config()
+    if config is None:
+        raise HTTPException(status_code=503, detail="Discord OAuth is not configured")
+    state_payload = _verified_value(request.cookies.get(OAUTH_STATE_COOKIE), config.session_secret)
+    if (
+        not state_payload
+        or state_payload.get("purpose") != "oauth_state"
+        or not isinstance(state_payload.get("state"), str)
+        or not isinstance(state_payload.get("expires_at"), int)
+        or state_payload["expires_at"] < int(time.time())
+        or not hmac.compare_digest(state, state_payload["state"])
+    ):
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            token_response = await client.post(
+                DISCORD_OAUTH_TOKEN_URL,
+                data={
+                    "client_id": config.client_id,
+                    "client_secret": config.client_secret,
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": config.redirect_uri,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            token_response.raise_for_status()
+            access_token = token_response.json().get("access_token")
+            if not isinstance(access_token, str):
+                raise ValueError("Discord did not return an access token")
+            user_response = await client.get(
+                DISCORD_API_USER_URL,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            user_response.raise_for_status()
+            user_id = user_response.json().get("id")
+    except (httpx.HTTPError, ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=502, detail="Discord login failed") from exc
+    if not isinstance(user_id, str) or not user_id.isdigit():
+        raise HTTPException(status_code=502, detail="Discord login returned an invalid identity")
+    actor = await agent_post("/auth/discord-user", {"user_id": user_id})
+    if not isinstance(actor, dict) or actor.get("role") not in {"viewer", "admin"}:
+        raise HTTPException(status_code=502, detail="Console authorization failed")
+    response = RedirectResponse("/", status_code=302)
+    response.delete_cookie(OAUTH_STATE_COOKIE, path="/auth/discord")
+    response.set_cookie(
+        SESSION_COOKIE,
+        _signed_value(
+            {
+                "purpose": "session",
+                "id": user_id,
+                "role": actor["role"],
+                "expires_at": int(time.time()) + 8 * 60 * 60,
+            },
+            config.session_secret,
+        ),
+        httponly=True,
+        secure=secure_cookie(),
+        samesite="strict",
+        max_age=8 * 60 * 60,
+        path="/",
+    )
+    return response
+
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request):
+    return {"oauth_enabled": oauth_config() is not None, "actor": session_actor(request)}
+
+
+@app.post("/api/auth/logout")
+async def auth_logout():
+    response = RedirectResponse("/", status_code=303)
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return response
 
 
 def local_deployment_status() -> dict:
@@ -132,17 +327,20 @@ async def runtime_config_audit_events(limit: int = 50):
 
 
 @app.post("/api/bot/start")
-async def bot_start():
+async def bot_start(request: Request):
+    require_admin(request)
     return await agent_post("/bot/start")
 
 
 @app.post("/api/bot/stop")
-async def bot_stop():
+async def bot_stop(request: Request):
+    require_admin(request)
     return await agent_post("/bot/stop")
 
 
 @app.post("/api/bot/restart")
-async def bot_restart():
+async def bot_restart(request: Request):
+    require_admin(request)
     return await agent_post("/bot/restart")
 
 

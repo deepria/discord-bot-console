@@ -56,6 +56,9 @@ function inspectSituation(): void {
         <button type="button" class="mode-switch" @click="$emit('settings')">
           SETTINGS
         </button>
+        <a class="mode-switch console-auth-link" href="/auth/discord/login">
+          DISCORD LOGIN
+        </a>
       </div>
     </header>
 

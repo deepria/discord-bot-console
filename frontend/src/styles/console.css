@@ -68,6 +68,12 @@
   letter-spacing: 0.08em;
 }
 
+.console-auth-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 .mode-switch:hover,
 .console-guidance button:hover {
   border-color: var(--accent);

@@ -50,6 +50,34 @@ function constraint(setting: (typeof runtimeSettings.value)[number]): string {
   return setting.empty_allowed ? "비움 가능" : "문자열";
 }
 
+function guidance(setting: (typeof runtimeSettings.value)[number]): string {
+  const guides: Record<string, string> = {
+    call_prefixes:
+      "예: 리오야, 리오 — 메시지 첫머리의 두 문구를 호출로 인식합니다.",
+    dm_always_reply: "예: on — DM에서 멘션이나 접두어 없이도 응답합니다.",
+    public_memory_in_dm:
+      "예: off — DM 답변에서 서버 공개 기억을 참조하지 않습니다.",
+    chat_web_search:
+      "예: off — 채팅 웹 검색만 끕니다. 모델이나 API key는 바뀌지 않습니다.",
+    community_lore:
+      "예: off — 답변 문맥에서 community lore를 제외합니다. 데이터는 삭제하지 않습니다.",
+    output_tokens: "예: 1800 — 답변 최대 길이를 조정합니다.",
+    channel_context_chars:
+      "예: 3000 — 최근 채널 문맥 예산을 조정합니다. 0이면 최근 문맥을 넣지 않습니다.",
+    history_max_chars:
+      "예: 24000 — 답변에 넣는 장기 대화 이력 문자 예산을 조정합니다.",
+    lore_max_items:
+      "예: 8 — 답변에 포함할 lore 항목 수를 제한합니다. 0이면 포함하지 않습니다.",
+    lore_max_chars:
+      "예: 5000 — 답변에 포함할 lore의 총 문자 예산을 조정합니다.",
+    runtime_default_location:
+      "예: 서울특별시 — 위치 생략 요청의 기본 위치입니다. none은 명시적으로 비웁니다.",
+  };
+  return (
+    guides[setting.key] ?? "값은 Bot의 기존 runtime validation으로 확인됩니다."
+  );
+}
+
 onMounted(() => {
   void Promise.all([
     store.refreshRuntimeSettings(),
@@ -143,6 +171,7 @@ onMounted(() => {
         <small
           >제약: {{ constraint(editing) }}. 적용 전 확인이 필요합니다.</small
         >
+        <p class="panel-footnote">{{ guidance(editing) }}</p>
         <div>
           <button type="submit">확인 단계</button
           ><button type="button" @click="editing = null">취소</button>
@@ -187,8 +216,8 @@ onMounted(() => {
     "
     :description="
       confirming === 'reset'
-        ? `${editing?.env_name}은 startup 값으로 돌아갑니다.`
-        : `${editing?.env_name}을 ${draft}(으)로 적용합니다.`
+        ? `${editing?.env_name}의 DB override를 지우고 startup 값으로 되돌립니다. ${editing ? guidance(editing) : ''}`
+        : `${editing?.env_name}을 ${draft}(으)로 적용합니다. ${editing ? guidance(editing) : ''} 적용 뒤 서버 snapshot을 다시 확인합니다.`
     "
     :confirm-label="runtimeSettingPending ? '적용 중…' : '적용'"
     @confirm="confirmWrite"

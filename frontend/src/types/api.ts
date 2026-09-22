@@ -3,6 +3,7 @@ export type MonitorId =
   "system" | "link" | "runtime" | "events" | "logs" | "deploy" | "control";
 export type MonitorSeverity = "normal" | "attention" | "alert";
 export type ControlAction = "start" | "restart" | "stop";
+export type ConsoleActorRole = "admin" | "viewer";
 export type RequestState = "idle" | "requesting" | "success" | "failure";
 export type LogConnectionState =
   "connecting" | "open" | "reconnecting" | "closed";
@@ -33,6 +34,16 @@ export interface BotStatus {
 
 export interface LogsResponse {
   logs: string[];
+}
+
+export interface ConsoleActor {
+  id: string;
+  role: ConsoleActorRole;
+}
+
+export interface ConsoleAuthStatus {
+  oauth_enabled: boolean;
+  actor: ConsoleActor | null;
 }
 
 export interface DeploymentRecord {

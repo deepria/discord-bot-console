@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import type { BotStatus } from "../../src/types/api";
+import type { BotStatus, ConsoleActor } from "../../src/types/api";
 
 const healthy: BotStatus = {
   online: true,
@@ -20,6 +20,7 @@ const healthy: BotStatus = {
 async function mockConsole(
   page: Page,
   status: BotStatus = healthy,
+  actor: ConsoleActor | null = null,
 ): Promise<void> {
   await page.addInitScript(() => {
     class FakeEventSource {
@@ -41,6 +42,9 @@ async function mockConsole(
     Object.defineProperty(window, "EventSource", { value: FakeEventSource });
   });
   await page.route("**/api/status", (route) => route.fulfill({ json: status }));
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({ json: { oauth_enabled: true, actor } }),
+  );
   await page.route("**/api/logs?**", (route) =>
     route.fulfill({ json: { logs: ["boot complete"] } }),
   );
@@ -137,6 +141,17 @@ test("starts in a practical console mode and preserves office mode", async ({
   await expect(
     page.getByRole("heading", { name: "SYSTEM HEALTHY" }),
   ).toBeVisible();
+});
+
+test("shows the authenticated Discord role instead of another login link", async ({
+  page,
+}) => {
+  await mockConsole(page, healthy, { id: "123456789", role: "admin" });
+  await page.goto("/");
+
+  await expect(page.getByText("DISCORD · ADMIN")).toBeVisible();
+  await expect(page.getByRole("button", { name: "LOG OUT" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "DISCORD LOGIN" })).toBeHidden();
 });
 
 test("shows an agent-backed read-only runtime settings snapshot", async ({

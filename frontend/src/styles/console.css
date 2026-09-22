@@ -74,6 +74,13 @@
   text-decoration: none;
 }
 
+.console-auth-actor {
+  color: var(--ink);
+  font: 800 10px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
 .mode-switch:hover,
 .console-guidance button:hover {
   border-color: var(--accent);

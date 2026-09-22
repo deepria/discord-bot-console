@@ -9,7 +9,8 @@ import CommandPalette from "../components/command/CommandPalette.vue";
 import { usePolling } from "../composables/usePolling";
 import { useLogStream } from "../composables/useLogStream";
 import { useOperationsStore } from "../stores/operations";
-import type { MonitorId } from "../types/api";
+import { api } from "../services/api";
+import type { ConsoleActor, MonitorId } from "../types/api";
 
 const store = useOperationsStore();
 const { scene, situation, monitorStatuses, selectedMonitor, briefing } =
@@ -18,6 +19,8 @@ const office = ref<InstanceType<typeof OfficeScene> | null>(null);
 const mode = ref<"console" | "office">("console");
 const paletteOpen = ref(false);
 const settingsOpen = ref(false);
+const authActor = ref<ConsoleActor | null>(null);
+const oauthEnabled = ref(false);
 let paletteTrigger: HTMLElement | null = null;
 
 usePolling(() => store.refreshStatus(), 5000);
@@ -73,7 +76,31 @@ function onGlobalKeydown(event: KeyboardEvent): void {
   }
 }
 
-onMounted(() => window.addEventListener("keydown", onGlobalKeydown));
+async function refreshAuth(): Promise<void> {
+  try {
+    const auth = await api.getAuthStatus();
+    oauthEnabled.value = auth.oauth_enabled;
+    authActor.value = auth.actor;
+  } catch {
+    // Authentication status must not prevent read-only console monitoring.
+    oauthEnabled.value = false;
+    authActor.value = null;
+  }
+}
+
+async function logout(): Promise<void> {
+  try {
+    await api.logout();
+  } finally {
+    authActor.value = null;
+    await refreshAuth();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", onGlobalKeydown);
+  void refreshAuth();
+});
 onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 
 function switchMode(nextMode: "console" | "office"): void {
@@ -112,9 +139,12 @@ async function closePanel(): Promise<void> {
         :situation="situation"
         :status="store.status"
         :last-status-at="store.lastStatusAt"
+        :auth-actor="authActor"
+        :oauth-enabled="oauthEnabled"
         @select="selectMonitor"
         @office="switchMode('office')"
         @settings="openSettings"
+        @logout="logout"
       />
       <section v-else class="office-mode-layout">
         <div class="office-visual-stage">

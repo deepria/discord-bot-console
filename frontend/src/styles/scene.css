@@ -304,6 +304,7 @@
 
 .control-dock-menu {
   display: grid;
+  order: -1;
   width: min(240px, 30vw);
   gap: 4px;
   padding: 6px;

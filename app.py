@@ -121,6 +121,11 @@ async def deployments():
     return {"console": local_deployment_status(), **agent}
 
 
+@app.get("/api/settings/runtime")
+async def runtime_settings():
+    return await agent_get("/settings/runtime")
+
+
 @app.post("/api/bot/start")
 async def bot_start():
     return await agent_post("/bot/start")

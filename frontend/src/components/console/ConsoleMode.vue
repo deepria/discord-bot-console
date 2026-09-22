@@ -16,6 +16,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [id: MonitorId];
   office: [];
+  settings: [];
 }>();
 
 const monitorItems = computed(() => {
@@ -52,6 +53,9 @@ function inspectSituation(): void {
         <button type="button" class="mode-switch" @click="$emit('office')">
           OFFICE MODE
         </button>
+        <button type="button" class="mode-switch" @click="$emit('settings')">
+          SETTINGS
+        </button>
       </div>
     </header>
 
@@ -71,6 +75,13 @@ function inspectSituation(): void {
             <small>{{ monitor.summary }}</small>
           </button>
         </nav>
+        <button
+          type="button"
+          class="console-settings"
+          @click="$emit('settings')"
+        >
+          <span>RUNTIME SETTINGS</span><small>READ ONLY</small>
+        </button>
       </aside>
 
       <div class="console-content">

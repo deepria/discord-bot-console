@@ -5,6 +5,9 @@ import type {
   DeploymentsResponse,
   LogsResponse,
   RuntimeEvent,
+  RuntimeSetting,
+  RuntimeSettingKind,
+  RuntimeSettingsResponse,
   RuntimeStatus,
 } from "../types/api";
 
@@ -90,6 +93,57 @@ function parseDeployments(value: unknown): DeploymentsResponse {
   };
 }
 
+function parseRuntimeSetting(value: unknown): RuntimeSetting | null {
+  if (!isRecord(value)) return null;
+  const kind = nullableString(value.kind) as RuntimeSettingKind | null;
+  const source = nullableString(value.source);
+  const rawValue = value.value;
+  const valueIsValid =
+    typeof rawValue === "boolean" ||
+    typeof rawValue === "number" ||
+    typeof rawValue === "string" ||
+    (Array.isArray(rawValue) &&
+      rawValue.every((item) => typeof item === "string"));
+  if (
+    !kind ||
+    !["bool", "int", "prefixes", "string"].includes(kind) ||
+    (source !== "db" && source !== "startup") ||
+    !valueIsValid ||
+    typeof value.key !== "string" ||
+    typeof value.env_name !== "string" ||
+    typeof value.display_value !== "string" ||
+    typeof value.empty_allowed !== "boolean"
+  ) {
+    return null;
+  }
+  return {
+    key: value.key,
+    env_name: value.env_name,
+    value: rawValue,
+    display_value: value.display_value,
+    source,
+    kind,
+    minimum: nullableNumber(value.minimum),
+    maximum: nullableNumber(value.maximum),
+    empty_allowed: value.empty_allowed,
+  };
+}
+
+function parseRuntimeSettings(value: unknown): RuntimeSettingsResponse {
+  if (!isRecord(value) || !Array.isArray(value.settings)) {
+    throw new ApiError("Runtime settings response is invalid.");
+  }
+  const settings = value.settings
+    .map(parseRuntimeSetting)
+    .filter((item): item is RuntimeSetting => item !== null);
+  if (settings.length !== value.settings.length) {
+    throw new ApiError(
+      "Runtime settings response contains an invalid setting.",
+    );
+  }
+  return { settings };
+}
+
 async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
   let response: Response;
   try {
@@ -124,6 +178,9 @@ export const api = {
   },
   async getDeployments(): Promise<DeploymentsResponse> {
     return parseDeployments(await requestJson("/api/deployments"));
+  },
+  async getRuntimeSettings(): Promise<RuntimeSettingsResponse> {
+    return parseRuntimeSettings(await requestJson("/api/settings/runtime"));
   },
   async control(action: ControlAction): Promise<unknown> {
     return requestJson(`/api/bot/${action}`, { method: "POST" });

@@ -11,6 +11,7 @@ import type {
   MonitorId,
   MonitorStatus,
   RuntimeEvent,
+  RuntimeSetting,
   SceneState,
   OperationRecord,
   PostCheckState,
@@ -76,6 +77,11 @@ export const useOperationsStore = defineStore("operations", () => {
   });
   const controlPostCheck = ref<PostCheckState>("idle");
   const operationsHistory = ref<OperationRecord[]>([]);
+
+  const runtimeSettings = ref<RuntimeSetting[]>([]);
+  const runtimeSettingsError = ref<string | null>(null);
+  const runtimeSettingsLoading = ref(false);
+  const lastRuntimeSettingsAt = ref<Date | null>(null);
 
   const situation = computed(() =>
     deriveSituation({
@@ -258,6 +264,23 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
+  async function refreshRuntimeSettings(): Promise<void> {
+    if (runtimeSettingsLoading.value) return;
+    runtimeSettingsLoading.value = true;
+    try {
+      runtimeSettings.value = (await api.getRuntimeSettings()).settings;
+      runtimeSettingsError.value = null;
+      lastRuntimeSettingsAt.value = new Date();
+    } catch (error) {
+      runtimeSettingsError.value =
+        error instanceof Error
+          ? error.message
+          : "Runtime settings request failed.";
+    } finally {
+      runtimeSettingsLoading.value = false;
+    }
+  }
+
   function selectMonitor(id: MonitorId | null): void {
     selectedMonitor.value = id;
     if (id === "events") unseenEventCount.value = 0;
@@ -365,12 +388,17 @@ export const useOperationsStore = defineStore("operations", () => {
     control,
     controlPostCheck,
     operationsHistory,
+    runtimeSettings,
+    runtimeSettingsError,
+    runtimeSettingsLoading,
+    lastRuntimeSettingsAt,
     scene,
     situation,
     briefing,
     monitorStatuses,
     refreshStatus,
     refreshDeployments,
+    refreshRuntimeSettings,
     refreshLogs,
     selectMonitor,
     replaceLogs,

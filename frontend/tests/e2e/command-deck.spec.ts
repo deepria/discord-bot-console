@@ -52,6 +52,25 @@ async function mockConsole(
       },
     }),
   );
+  await page.route("**/api/settings/runtime", (route) =>
+    route.fulfill({
+      json: {
+        settings: [
+          {
+            key: "chat_web_search",
+            env_name: "CHAT_WEB_SEARCH",
+            value: true,
+            display_value: "on",
+            source: "db",
+            kind: "bool",
+            minimum: null,
+            maximum: null,
+            empty_allowed: false,
+          },
+        ],
+      },
+    }),
+  );
   await page.route("**/api/bot/**", (route) =>
     route.fulfill({ json: { ok: true } }),
   );
@@ -100,6 +119,22 @@ test("starts in a practical console mode and preserves office mode", async ({
   await expect(
     page.getByRole("heading", { name: "SYSTEM HEALTHY" }),
   ).toBeVisible();
+});
+
+test("shows an agent-backed read-only runtime settings snapshot", async ({
+  page,
+}) => {
+  await mockConsole(page);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "RUNTIME SETTINGS" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("CHAT_WEB_SEARCH", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("DB OVERRIDE", { exact: true })).toBeVisible();
 });
 
 test("keeps office controls readable at tablet and mobile widths", async ({

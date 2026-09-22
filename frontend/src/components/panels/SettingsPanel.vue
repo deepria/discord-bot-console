@@ -20,10 +20,17 @@ const {
   policySettings,
   policySettingsError,
   policySettingsLoading,
+  policySettingPending,
 } = storeToRefs(store);
 const editing = ref<(typeof runtimeSettings.value)[number] | null>(null);
 const draft = ref("");
 const confirming = ref<"set" | "reset" | null>(null);
+const editingPolicy = ref<{
+  policy: "memory" | "chatlog" | "capture";
+  scope: string;
+  value: string;
+} | null>(null);
+const confirmingPolicy = ref(false);
 
 function beginEdit(setting: (typeof runtimeSettings.value)[number]) {
   editing.value = setting;
@@ -42,6 +49,25 @@ async function confirmWrite() {
   );
   confirming.value = null;
   editing.value = null;
+}
+
+function editPolicy(
+  policy: "memory" | "chatlog" | "capture",
+  scope: string,
+  value: string,
+) {
+  editingPolicy.value = { policy, scope, value };
+}
+
+async function confirmPolicyWrite() {
+  if (!editingPolicy.value) return;
+  await store.writePolicySetting(
+    editingPolicy.value.policy,
+    editingPolicy.value.scope,
+    editingPolicy.value.value,
+  );
+  confirmingPolicy.value = false;
+  editingPolicy.value = null;
 }
 
 function constraint(setting: (typeof runtimeSettings.value)[number]): string {
@@ -188,12 +214,10 @@ onMounted(() => {
         class="operations-history"
         aria-labelledby="policy-settings-title"
       >
-        <h3 id="policy-settings-title">
-          MEMORY &amp; CHATLOG POLICY / READ ONLY
-        </h3>
+        <h3 id="policy-settings-title">MEMORY &amp; CHATLOG POLICY</h3>
         <p>
-          상속 체인과 최종 적용값만 표시합니다. 변경·clear·purge는 아직
-          Console에 노출하지 않습니다.
+          scope별 override를 변경할 수 있습니다. clear·purge는 Console에
+          노출하지 않습니다.
         </p>
         <p v-if="policySettingsLoading">정책을 읽는 중입니다.</p>
         <p v-else-if="policySettingsError" class="inline-alert">
@@ -203,19 +227,74 @@ onMounted(() => {
           <article v-for="policy in policySettings" :key="policy.scope">
             <strong>{{ policy.scope }}</strong>
             <span
-              >MEMORY {{ policy.memory_effective }} /
-              {{ policy.memory_source }}</span
+              >MEMORY {{ policy.memory_effective }} / {{ policy.memory_source }}
+              <button
+                type="button"
+                @click="
+                  editPolicy('memory', policy.scope, policy.memory_override)
+                "
+              >
+                EDIT
+              </button></span
             >
             <span
               >CHATLOG {{ policy.chatlog_effective }} /
-              {{ policy.chatlog_source }}</span
+              {{ policy.chatlog_source }}
+              <button
+                type="button"
+                @click="
+                  editPolicy('chatlog', policy.scope, policy.chatlog_override)
+                "
+              >
+                EDIT
+              </button></span
             >
             <span
               >CAPTURE {{ policy.capture_effective }} /
-              {{ policy.capture_source }}</span
+              {{ policy.capture_source }}
+              <button
+                type="button"
+                @click="
+                  editPolicy('capture', policy.scope, policy.capture_override)
+                "
+              >
+                EDIT
+              </button></span
             >
           </article>
         </div>
+        <form
+          v-if="editingPolicy && !confirmingPolicy"
+          class="settings-editor"
+          @submit.prevent="confirmingPolicy = true"
+        >
+          <label
+            >{{ editingPolicy.policy.toUpperCase() }} /
+            {{ editingPolicy.scope }}</label
+          >
+          <select v-model="editingPolicy.value">
+            <option value="inherit">inherit</option>
+            <option
+              v-for="value in editingPolicy.policy === 'memory'
+                ? ['normal', 'read_only', 'write_only', 'off']
+                : editingPolicy.policy === 'chatlog'
+                  ? ['on', 'off']
+                  : ['all', 'direct']"
+              :key="value"
+              :value="value"
+            >
+              {{ value }}
+            </option>
+          </select>
+          <p class="panel-footnote">
+            범위를 좁히거나 capture 정책을 바꾸면 Bot의 recent context를
+            안전하게 비웁니다.
+          </p>
+          <div>
+            <button type="submit">확인 단계</button
+            ><button type="button" @click="editingPolicy = null">취소</button>
+          </div>
+        </form>
       </section>
       <section class="operations-history" aria-labelledby="runtime-audit-title">
         <h3 id="runtime-audit-title">CONFIGURATION CHANGE HISTORY</h3>
@@ -259,5 +338,13 @@ onMounted(() => {
     :confirm-label="runtimeSettingPending ? '적용 중…' : '적용'"
     @confirm="confirmWrite"
     @cancel="confirming = null"
+  />
+  <ConfirmDialog
+    :open="confirmingPolicy"
+    title="Policy override를 변경할까요?"
+    :description="`${editingPolicy?.policy.toUpperCase()}을 ${editingPolicy?.value}(으)로 적용합니다. 정책 변경 뒤 Bot은 stale recent context를 비웁니다.`"
+    :confirm-label="policySettingPending ? '적용 중…' : '적용'"
+    @confirm="confirmPolicyWrite"
+    @cancel="confirmingPolicy = false"
   />
 </template>

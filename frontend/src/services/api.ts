@@ -323,6 +323,20 @@ export const api = {
   async getPolicySettings(): Promise<PolicySettingsResponse> {
     return parsePolicies(await requestJson("/api/settings/policies"));
   },
+  async setPolicySetting(
+    policy: string,
+    scope: string,
+    value: string,
+  ): Promise<void> {
+    await requestJson(
+      `/api/settings/policies/${encodeURIComponent(policy)}/${scope}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value, request_id: crypto.randomUUID() }),
+      },
+    );
+  },
   async setRuntimeSetting(
     key: string,
     value: string,

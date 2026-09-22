@@ -49,6 +49,11 @@ class RuntimeSettingWrite(BaseModel):
     request_id: str
 
 
+class PolicySettingWrite(BaseModel):
+    value: str
+    request_id: str
+
+
 def oauth_config() -> OAuthConfig | None:
     values = {
         "client_id": os.getenv("RIO_CONSOLE_DISCORD_CLIENT_ID", "").strip(),
@@ -352,6 +357,15 @@ async def runtime_settings():
 @app.get("/api/settings/policies")
 async def policy_settings():
     return await agent_get("/settings/policies")
+
+
+@app.put("/api/settings/policies/{policy}/{scope:path}")
+async def set_policy_setting(policy: str, scope: str, write: PolicySettingWrite, request: Request):
+    actor = require_admin(request)
+    return await agent_write(
+        "PUT", f"/settings/policies/{policy}/{scope}",
+        {"value": write.value, "request_id": write.request_id, "actor_id": actor["id"]},
+    )
 
 
 @app.put("/api/settings/runtime/{key}")

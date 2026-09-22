@@ -305,18 +305,28 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
-  async function writeRuntimeSetting(key: string, value: string | null): Promise<boolean> {
+  async function writeRuntimeSetting(
+    key: string,
+    value: string | null,
+  ): Promise<boolean> {
     if (runtimeSettingPending.value) return false;
     runtimeSettingPending.value = key;
     runtimeSettingResult.value = null;
     try {
-      if (value === null) await api.resetRuntimeSetting(key, crypto.randomUUID());
+      if (value === null)
+        await api.resetRuntimeSetting(key, crypto.randomUUID());
       else await api.setRuntimeSetting(key, value, crypto.randomUUID());
-      await Promise.all([refreshRuntimeSettings(), refreshRuntimeConfigAuditEvents()]);
+      await Promise.all([
+        refreshRuntimeSettings(),
+        refreshRuntimeConfigAuditEvents(),
+      ]);
       runtimeSettingResult.value = "서버의 최신 설정을 다시 확인했습니다.";
       return true;
     } catch (error) {
-      runtimeSettingResult.value = error instanceof Error ? `변경 실패: ${error.message}` : "변경에 실패했습니다.";
+      runtimeSettingResult.value =
+        error instanceof Error
+          ? `변경 실패: ${error.message}`
+          : "변경에 실패했습니다.";
       return false;
     } finally {
       runtimeSettingPending.value = null;

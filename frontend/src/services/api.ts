@@ -170,9 +170,15 @@ function parseRuntimeSettings(value: unknown): RuntimeSettingsResponse {
   return { settings };
 }
 
-function parseRuntimeSettingWriteResult(value: unknown): RuntimeSettingWriteResult {
+function parseRuntimeSettingWriteResult(
+  value: unknown,
+): RuntimeSettingWriteResult {
   const setting = parseRuntimeSetting(value);
-  if (!setting || (!isRecord(value)) || (value.changed_at !== null && typeof value.changed_at !== "string")) {
+  if (
+    !setting ||
+    !isRecord(value) ||
+    (value.changed_at !== null && typeof value.changed_at !== "string")
+  ) {
     throw new ApiError("Runtime settings write response is invalid.");
   }
   return { ...setting, changed_at: value.changed_at as string | null };
@@ -282,15 +288,30 @@ export const api = {
   async getRuntimeSettings(): Promise<RuntimeSettingsResponse> {
     return parseRuntimeSettings(await requestJson("/api/settings/runtime"));
   },
-  async setRuntimeSetting(key: string, value: string, requestId: string): Promise<RuntimeSettingWriteResult> {
-    return parseRuntimeSettingWriteResult(await requestJson(`/api/settings/runtime/${encodeURIComponent(key)}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value, request_id: requestId }),
-    }));
+  async setRuntimeSetting(
+    key: string,
+    value: string,
+    requestId: string,
+  ): Promise<RuntimeSettingWriteResult> {
+    return parseRuntimeSettingWriteResult(
+      await requestJson(`/api/settings/runtime/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value, request_id: requestId }),
+      }),
+    );
   },
-  async resetRuntimeSetting(key: string, requestId: string): Promise<RuntimeSettingWriteResult> {
-    return parseRuntimeSettingWriteResult(await requestJson(`/api/settings/runtime/${encodeURIComponent(key)}`, {
-      method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_id: requestId }),
-    }));
+  async resetRuntimeSetting(
+    key: string,
+    requestId: string,
+  ): Promise<RuntimeSettingWriteResult> {
+    return parseRuntimeSettingWriteResult(
+      await requestJson(`/api/settings/runtime/${encodeURIComponent(key)}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request_id: requestId }),
+      }),
+    );
   },
   async getRuntimeConfigAuditEvents(): Promise<RuntimeConfigAuditResponse> {
     return parseRuntimeConfigAudit(

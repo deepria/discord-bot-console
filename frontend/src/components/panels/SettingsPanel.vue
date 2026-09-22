@@ -11,6 +11,9 @@ const {
   runtimeSettingsError,
   runtimeSettingsLoading,
   lastRuntimeSettingsAt,
+  runtimeConfigAuditEvents,
+  runtimeConfigAuditError,
+  runtimeConfigAuditLoading,
 } = storeToRefs(store);
 
 function constraint(setting: (typeof runtimeSettings.value)[number]): string {
@@ -22,7 +25,12 @@ function constraint(setting: (typeof runtimeSettings.value)[number]): string {
   return setting.empty_allowed ? "비움 가능" : "문자열";
 }
 
-onMounted(() => void store.refreshRuntimeSettings());
+onMounted(() => {
+  void Promise.all([
+    store.refreshRuntimeSettings(),
+    store.refreshRuntimeConfigAuditEvents(),
+  ]);
+});
 </script>
 
 <template>
@@ -76,6 +84,28 @@ onMounted(() => void store.refreshRuntimeSettings());
           </span>
         </article>
       </div>
+      <section class="operations-history" aria-labelledby="runtime-audit-title">
+        <h3 id="runtime-audit-title">CONFIGURATION CHANGE HISTORY</h3>
+        <p v-if="runtimeConfigAuditLoading">감사 이력을 읽는 중입니다.</p>
+        <p v-else-if="runtimeConfigAuditError" class="inline-alert">
+          감사 이력을 읽지 못했습니다. {{ runtimeConfigAuditError }}
+        </p>
+        <p v-else-if="!runtimeConfigAuditEvents.length">
+          기록된 런타임 설정 변경이 없습니다.
+        </p>
+        <ol v-else>
+          <li v-for="event in runtimeConfigAuditEvents" :key="event.id">
+            <strong
+              >{{ event.action }} / {{ event.outcome.toUpperCase() }}</strong
+            >
+            <span
+              >{{ event.target }} · {{ event.actor_kind.toUpperCase() }}</span
+            >
+            <time>{{ formatKst(event.occurred_at) }}</time>
+          </li>
+        </ol>
+        <p>변경 값과 대화 내용은 감사 이력에 저장하지 않습니다.</p>
+      </section>
       <p class="panel-footnote">
         LAST SNAPSHOT / {{ formatKst(lastRuntimeSettingsAt) }}
       </p>

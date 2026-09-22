@@ -50,6 +50,19 @@ def test_runtime_settings_route_preserves_agent_contract(monkeypatch):
     assert response.headers["cache-control"].startswith("no-store")
 
 
+def test_runtime_audit_route_preserves_agent_contract(monkeypatch):
+    async def fake_agent_get(path: str):
+        assert path == "/settings/audit-events?limit=50"
+        return {"events": [{"target": "CHAT_WEB_SEARCH", "outcome": "success"}]}
+
+    monkeypatch.setattr(app_module, "agent_get", fake_agent_get)
+    response = client.get("/api/settings/audit-events")
+
+    assert response.status_code == 200
+    assert response.json()["events"][0]["target"] == "CHAT_WEB_SEARCH"
+    assert response.headers["cache-control"].startswith("no-store")
+
+
 def test_vue_history_fallback_uses_the_built_index():
     root = client.get("/")
     nested = client.get("/settings")

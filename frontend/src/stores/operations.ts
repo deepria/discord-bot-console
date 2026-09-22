@@ -11,6 +11,7 @@ import type {
   MonitorId,
   MonitorStatus,
   RuntimeEvent,
+  RuntimeConfigAuditEvent,
   RuntimeSetting,
   SceneState,
   OperationRecord,
@@ -82,6 +83,9 @@ export const useOperationsStore = defineStore("operations", () => {
   const runtimeSettingsError = ref<string | null>(null);
   const runtimeSettingsLoading = ref(false);
   const lastRuntimeSettingsAt = ref<Date | null>(null);
+  const runtimeConfigAuditEvents = ref<RuntimeConfigAuditEvent[]>([]);
+  const runtimeConfigAuditError = ref<string | null>(null);
+  const runtimeConfigAuditLoading = ref(false);
 
   const situation = computed(() =>
     deriveSituation({
@@ -281,6 +285,24 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
+  async function refreshRuntimeConfigAuditEvents(): Promise<void> {
+    if (runtimeConfigAuditLoading.value) return;
+    runtimeConfigAuditLoading.value = true;
+    try {
+      runtimeConfigAuditEvents.value = (
+        await api.getRuntimeConfigAuditEvents()
+      ).events;
+      runtimeConfigAuditError.value = null;
+    } catch (error) {
+      runtimeConfigAuditError.value =
+        error instanceof Error
+          ? error.message
+          : "Runtime audit request failed.";
+    } finally {
+      runtimeConfigAuditLoading.value = false;
+    }
+  }
+
   function selectMonitor(id: MonitorId | null): void {
     selectedMonitor.value = id;
     if (id === "events") unseenEventCount.value = 0;
@@ -392,6 +414,9 @@ export const useOperationsStore = defineStore("operations", () => {
     runtimeSettingsError,
     runtimeSettingsLoading,
     lastRuntimeSettingsAt,
+    runtimeConfigAuditEvents,
+    runtimeConfigAuditError,
+    runtimeConfigAuditLoading,
     scene,
     situation,
     briefing,
@@ -399,6 +424,7 @@ export const useOperationsStore = defineStore("operations", () => {
     refreshStatus,
     refreshDeployments,
     refreshRuntimeSettings,
+    refreshRuntimeConfigAuditEvents,
     refreshLogs,
     selectMonitor,
     replaceLogs,

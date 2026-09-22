@@ -74,6 +74,26 @@ export interface RuntimeSettingsResponse {
   settings: RuntimeSetting[];
 }
 
+export type RuntimeConfigAuditActor = "console" | "discord" | "system";
+export type RuntimeConfigAuditAction =
+  "runtime_config.set" | "runtime_config.reset";
+export type RuntimeConfigAuditOutcome = "success" | "failure";
+
+export interface RuntimeConfigAuditEvent {
+  id: string;
+  occurred_at: string;
+  actor_kind: RuntimeConfigAuditActor;
+  actor_id: string;
+  action: RuntimeConfigAuditAction;
+  target: string;
+  outcome: RuntimeConfigAuditOutcome;
+  request_id: string | null;
+}
+
+export interface RuntimeConfigAuditResponse {
+  events: RuntimeConfigAuditEvent[];
+}
+
 export interface MonitorStatus {
   id: MonitorId;
   label: string;

@@ -71,6 +71,24 @@ async function mockConsole(
       },
     }),
   );
+  await page.route("**/api/settings/audit-events?**", (route) =>
+    route.fulfill({
+      json: {
+        events: [
+          {
+            id: "audit-1",
+            occurred_at: "2026-09-22T06:20:00Z",
+            actor_kind: "discord",
+            actor_id: "1234",
+            action: "runtime_config.set",
+            target: "CHAT_WEB_SEARCH",
+            outcome: "success",
+            request_id: "interaction-1",
+          },
+        ],
+      },
+    }),
+  );
   await page.route("**/api/bot/**", (route) =>
     route.fulfill({ json: { ok: true } }),
   );

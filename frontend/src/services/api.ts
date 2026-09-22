@@ -5,6 +5,8 @@ import type {
   DeploymentsResponse,
   LogsResponse,
   RuntimeEvent,
+  RuntimeConfigAuditEvent,
+  RuntimeConfigAuditResponse,
   RuntimeSetting,
   RuntimeSettingKind,
   RuntimeSettingsResponse,
@@ -144,6 +146,50 @@ function parseRuntimeSettings(value: unknown): RuntimeSettingsResponse {
   return { settings };
 }
 
+function parseRuntimeConfigAuditEvent(
+  value: unknown,
+): RuntimeConfigAuditEvent | null {
+  if (!isRecord(value)) return null;
+  const actorKind = nullableString(value.actor_kind);
+  const action = nullableString(value.action);
+  const outcome = nullableString(value.outcome);
+  if (
+    typeof value.id !== "string" ||
+    typeof value.occurred_at !== "string" ||
+    typeof value.actor_id !== "string" ||
+    typeof value.target !== "string" ||
+    !["console", "discord", "system"].includes(actorKind ?? "") ||
+    !["runtime_config.set", "runtime_config.reset"].includes(action ?? "") ||
+    !["success", "failure"].includes(outcome ?? "") ||
+    (value.request_id !== null && typeof value.request_id !== "string")
+  ) {
+    return null;
+  }
+  return {
+    id: value.id,
+    occurred_at: value.occurred_at,
+    actor_kind: actorKind as RuntimeConfigAuditEvent["actor_kind"],
+    actor_id: value.actor_id,
+    action: action as RuntimeConfigAuditEvent["action"],
+    target: value.target,
+    outcome: outcome as RuntimeConfigAuditEvent["outcome"],
+    request_id: value.request_id,
+  };
+}
+
+function parseRuntimeConfigAudit(value: unknown): RuntimeConfigAuditResponse {
+  if (!isRecord(value) || !Array.isArray(value.events)) {
+    throw new ApiError("Runtime audit response is invalid.");
+  }
+  const events = value.events
+    .map(parseRuntimeConfigAuditEvent)
+    .filter((item): item is RuntimeConfigAuditEvent => item !== null);
+  if (events.length !== value.events.length) {
+    throw new ApiError("Runtime audit response contains an invalid event.");
+  }
+  return { events };
+}
+
 async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
   let response: Response;
   try {
@@ -181,6 +227,11 @@ export const api = {
   },
   async getRuntimeSettings(): Promise<RuntimeSettingsResponse> {
     return parseRuntimeSettings(await requestJson("/api/settings/runtime"));
+  },
+  async getRuntimeConfigAuditEvents(): Promise<RuntimeConfigAuditResponse> {
+    return parseRuntimeConfigAudit(
+      await requestJson("/api/settings/audit-events?limit=50"),
+    );
   },
   async control(action: ControlAction): Promise<unknown> {
     return requestJson(`/api/bot/${action}`, { method: "POST" });

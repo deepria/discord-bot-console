@@ -17,6 +17,9 @@ const {
   runtimeConfigAuditLoading,
   runtimeSettingPending,
   runtimeSettingResult,
+  policySettings,
+  policySettingsError,
+  policySettingsLoading,
 } = storeToRefs(store);
 const editing = ref<(typeof runtimeSettings.value)[number] | null>(null);
 const draft = ref("");
@@ -82,6 +85,7 @@ onMounted(() => {
   void Promise.all([
     store.refreshRuntimeSettings(),
     store.refreshRuntimeConfigAuditEvents(),
+    store.refreshPolicySettings(),
   ]);
 });
 </script>
@@ -180,6 +184,39 @@ onMounted(() => {
       <p v-if="runtimeSettingResult" class="panel-footnote">
         {{ runtimeSettingResult }}
       </p>
+      <section
+        class="operations-history"
+        aria-labelledby="policy-settings-title"
+      >
+        <h3 id="policy-settings-title">
+          MEMORY &amp; CHATLOG POLICY / READ ONLY
+        </h3>
+        <p>
+          상속 체인과 최종 적용값만 표시합니다. 변경·clear·purge는 아직
+          Console에 노출하지 않습니다.
+        </p>
+        <p v-if="policySettingsLoading">정책을 읽는 중입니다.</p>
+        <p v-else-if="policySettingsError" class="inline-alert">
+          정책을 읽지 못했습니다. {{ policySettingsError }}
+        </p>
+        <div v-else class="policy-list" aria-label="Memory 및 chatlog 정책">
+          <article v-for="policy in policySettings" :key="policy.scope">
+            <strong>{{ policy.scope }}</strong>
+            <span
+              >MEMORY {{ policy.memory_effective }} /
+              {{ policy.memory_source }}</span
+            >
+            <span
+              >CHATLOG {{ policy.chatlog_effective }} /
+              {{ policy.chatlog_source }}</span
+            >
+            <span
+              >CAPTURE {{ policy.capture_effective }} /
+              {{ policy.capture_source }}</span
+            >
+          </article>
+        </div>
+      </section>
       <section class="operations-history" aria-labelledby="runtime-audit-title">
         <h3 id="runtime-audit-title">CONFIGURATION CHANGE HISTORY</h3>
         <p v-if="runtimeConfigAuditLoading">감사 이력을 읽는 중입니다.</p>

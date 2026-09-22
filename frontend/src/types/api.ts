@@ -85,6 +85,23 @@ export interface RuntimeSettingsResponse {
   settings: RuntimeSetting[];
 }
 
+export interface PolicySetting {
+  scope: string;
+  memory_override: string;
+  memory_effective: string;
+  memory_source: string;
+  chatlog_override: string;
+  chatlog_effective: string;
+  chatlog_source: string;
+  capture_override: string;
+  capture_effective: string;
+  capture_source: string;
+}
+
+export interface PolicySettingsResponse {
+  policies: PolicySetting[];
+}
+
 export interface RuntimeSettingWriteResult {
   key: string;
   env_name: string;

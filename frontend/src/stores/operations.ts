@@ -86,6 +86,8 @@ export const useOperationsStore = defineStore("operations", () => {
   const runtimeConfigAuditEvents = ref<RuntimeConfigAuditEvent[]>([]);
   const runtimeConfigAuditError = ref<string | null>(null);
   const runtimeConfigAuditLoading = ref(false);
+  const runtimeSettingPending = ref<string | null>(null);
+  const runtimeSettingResult = ref<string | null>(null);
 
   const situation = computed(() =>
     deriveSituation({
@@ -303,6 +305,34 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
+  async function writeRuntimeSetting(
+    key: string,
+    value: string | null,
+  ): Promise<boolean> {
+    if (runtimeSettingPending.value) return false;
+    runtimeSettingPending.value = key;
+    runtimeSettingResult.value = null;
+    try {
+      if (value === null)
+        await api.resetRuntimeSetting(key, crypto.randomUUID());
+      else await api.setRuntimeSetting(key, value, crypto.randomUUID());
+      await Promise.all([
+        refreshRuntimeSettings(),
+        refreshRuntimeConfigAuditEvents(),
+      ]);
+      runtimeSettingResult.value = "서버의 최신 설정을 다시 확인했습니다.";
+      return true;
+    } catch (error) {
+      runtimeSettingResult.value =
+        error instanceof Error
+          ? `변경 실패: ${error.message}`
+          : "변경에 실패했습니다.";
+      return false;
+    } finally {
+      runtimeSettingPending.value = null;
+    }
+  }
+
   function selectMonitor(id: MonitorId | null): void {
     selectedMonitor.value = id;
     if (id === "events") unseenEventCount.value = 0;
@@ -417,6 +447,8 @@ export const useOperationsStore = defineStore("operations", () => {
     runtimeConfigAuditEvents,
     runtimeConfigAuditError,
     runtimeConfigAuditLoading,
+    runtimeSettingPending,
+    runtimeSettingResult,
     scene,
     situation,
     briefing,
@@ -425,6 +457,7 @@ export const useOperationsStore = defineStore("operations", () => {
     refreshDeployments,
     refreshRuntimeSettings,
     refreshRuntimeConfigAuditEvents,
+    writeRuntimeSetting,
     refreshLogs,
     selectMonitor,
     replaceLogs,

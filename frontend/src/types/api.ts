@@ -85,6 +85,15 @@ export interface RuntimeSettingsResponse {
   settings: RuntimeSetting[];
 }
 
+export interface RuntimeSettingWriteResult {
+  key: string;
+  env_name: string;
+  value: RuntimeSetting["value"];
+  display_value: string;
+  source: RuntimeSettingSource;
+  changed_at: string | null;
+}
+
 export type RuntimeConfigAuditActor = "console" | "discord" | "system";
 export type RuntimeConfigAuditAction =
   "runtime_config.set" | "runtime_config.reset";

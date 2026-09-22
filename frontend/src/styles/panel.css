@@ -228,6 +228,69 @@
   letter-spacing: 0.08em;
 }
 
+.settings-panel {
+  width: clamp(420px, 44vw, 760px);
+}
+
+.settings-list {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, auto) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  background: rgba(1, 13, 23, 0.52);
+}
+
+.settings-list strong,
+.settings-list small,
+.settings-list output,
+.settings-list span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.settings-list strong,
+.settings-list output {
+  font: 700 11px/1.35 var(--font-mono);
+}
+
+.settings-list small,
+.settings-list span {
+  margin-top: 3px;
+  color: var(--muted);
+  font: 700 8px/1.35 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.settings-list output {
+  color: var(--ink);
+  text-align: right;
+}
+
+.settings-list .source-db {
+  color: var(--accent);
+}
+
+@media (max-width: 540px) {
+  .settings-panel {
+    width: min(100%, 100vw);
+  }
+
+  .settings-list article {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .settings-list span {
+    grid-column: 1 / -1;
+  }
+}
+
 .command-timeline,
 .operations-history {
   border: 1px solid rgba(var(--accent-rgb), 0.23);

@@ -55,6 +55,25 @@ export interface DeploymentsResponse {
   deployments: DeploymentRecord[];
 }
 
+export type RuntimeSettingKind = "bool" | "int" | "prefixes" | "string";
+export type RuntimeSettingSource = "db" | "startup";
+
+export interface RuntimeSetting {
+  key: string;
+  env_name: string;
+  value: boolean | number | string | string[];
+  display_value: string;
+  source: RuntimeSettingSource;
+  kind: RuntimeSettingKind;
+  minimum: number | null;
+  maximum: number | null;
+  empty_allowed: boolean;
+}
+
+export interface RuntimeSettingsResponse {
+  settings: RuntimeSetting[];
+}
+
 export interface MonitorStatus {
   id: MonitorId;
   label: string;

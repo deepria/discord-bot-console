@@ -26,6 +26,7 @@ const emit = defineEmits<{
   dismissPanel: [];
   selectLogs: [];
   console: [];
+  settings: [];
 }>();
 
 const root = ref<HTMLElement | null>(null);
@@ -151,6 +152,13 @@ onUnmounted(() => window.clearInterval(clockTimer));
             @click="$emit('console')"
           >
             CONSOLE MODE
+          </button>
+          <button
+            type="button"
+            class="office-console-switch"
+            @click="$emit('settings')"
+          >
+            SETTINGS
           </button>
         </div>
       </header>

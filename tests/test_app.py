@@ -37,6 +37,19 @@ def test_control_route_preserves_agent_contract(monkeypatch):
     assert response.json() == {"ok": True, "path": "/bot/restart"}
 
 
+def test_runtime_settings_route_preserves_agent_contract(monkeypatch):
+    async def fake_agent_get(path: str):
+        assert path == "/settings/runtime"
+        return {"settings": [{"key": "chat_web_search", "value": True}]}
+
+    monkeypatch.setattr(app_module, "agent_get", fake_agent_get)
+    response = client.get("/api/settings/runtime")
+
+    assert response.status_code == 200
+    assert response.json()["settings"][0]["key"] == "chat_web_search"
+    assert response.headers["cache-control"].startswith("no-store")
+
+
 def test_vue_history_fallback_uses_the_built_index():
     root = client.get("/")
     nested = client.get("/settings")

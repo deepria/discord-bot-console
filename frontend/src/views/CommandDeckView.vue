@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import ConsoleMode from "../components/console/ConsoleMode.vue";
 import OfficeScene from "../components/scene/OfficeScene.vue";
 import MonitorPanel from "../components/panels/MonitorPanel.vue";
+import SettingsPanel from "../components/panels/SettingsPanel.vue";
 import CommandPalette from "../components/command/CommandPalette.vue";
 import { usePolling } from "../composables/usePolling";
 import { useLogStream } from "../composables/useLogStream";
@@ -16,6 +17,7 @@ const { scene, situation, monitorStatuses, selectedMonitor, briefing } =
 const office = ref<InstanceType<typeof OfficeScene> | null>(null);
 const mode = ref<"console" | "office">("console");
 const paletteOpen = ref(false);
+const settingsOpen = ref(false);
 let paletteTrigger: HTMLElement | null = null;
 
 usePolling(() => store.refreshStatus(), 5000);
@@ -23,6 +25,7 @@ usePolling(() => store.refreshDeployments(), 10000);
 useLogStream();
 
 function selectMonitor(id: MonitorId): void {
+  settingsOpen.value = false;
   if (selectedMonitor.value === id) {
     void closePanel();
     return;
@@ -33,6 +36,16 @@ function selectMonitor(id: MonitorId): void {
 
 function dismissPanel(): void {
   store.selectMonitor(null);
+}
+
+function openSettings(): void {
+  office.value?.closeDialogue();
+  store.selectMonitor(null);
+  settingsOpen.value = true;
+}
+
+function closeSettings(): void {
+  settingsOpen.value = false;
 }
 
 function selectLogs(): void {
@@ -101,6 +114,7 @@ async function closePanel(): Promise<void> {
         :last-status-at="store.lastStatusAt"
         @select="selectMonitor"
         @office="switchMode('office')"
+        @settings="openSettings"
       />
       <section v-else class="office-mode-layout">
         <div class="office-visual-stage">
@@ -115,6 +129,7 @@ async function closePanel(): Promise<void> {
             @select="selectMonitor"
             @select-logs="selectLogs"
             @console="switchMode('console')"
+            @settings="openSettings"
             @dismiss-panel="dismissPanel"
           />
         </div>
@@ -135,10 +150,14 @@ async function closePanel(): Promise<void> {
         @close="closePanel"
       />
     </Transition>
+    <Transition name="panel-slide">
+      <SettingsPanel v-if="settingsOpen" @close="closeSettings" />
+    </Transition>
     <CommandPalette
       :open="paletteOpen"
       @close="closePalette"
       @select="selectMonitor"
+      @settings="openSettings"
     />
   </main>
 </template>

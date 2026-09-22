@@ -3,7 +3,11 @@ import { computed, nextTick, ref, watch } from "vue";
 import type { MonitorId } from "../../types/api";
 
 const props = defineProps<{ open: boolean }>();
-const emit = defineEmits<{ close: []; select: [id: MonitorId] }>();
+const emit = defineEmits<{
+  close: [];
+  select: [id: MonitorId];
+  settings: [];
+}>();
 const query = ref("");
 const input = ref<HTMLInputElement | null>(null);
 const palette = ref<HTMLElement | null>(null);
@@ -29,11 +33,17 @@ const commands: { id: MonitorId; label: string; keywords: string }[] = [
     keywords: "control start restart stop 제어 시작 재시작 중지",
   },
 ];
+const settingsCommand = {
+  id: "settings",
+  label: "Runtime Settings 열기",
+  keywords: "settings runtime config 설정 환경 변수",
+} as const;
 
 const filtered = computed(() => {
   const keyword = query.value.trim().toLowerCase();
-  if (!keyword) return commands;
-  return commands.filter((command) =>
+  const all = [...commands, settingsCommand];
+  if (!keyword) return all;
+  return all.filter((command) =>
     `${command.label} ${command.keywords}`.toLowerCase().includes(keyword),
   );
 });
@@ -48,8 +58,9 @@ watch(
   },
 );
 
-function choose(id: MonitorId): void {
-  emit("select", id);
+function choose(id: MonitorId | "settings"): void {
+  if (id === "settings") emit("settings");
+  else emit("select", id);
   emit("close");
 }
 

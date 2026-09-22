@@ -9,6 +9,7 @@ vi.mock("../../src/services/api", () => ({
     getStatus: vi.fn(),
     getLogs: vi.fn(),
     getDeployments: vi.fn(),
+    getRuntimeSettings: vi.fn(),
     control: vi.fn(),
   },
 }));
@@ -96,6 +97,33 @@ describe("operations store", () => {
     expect(store.logs).toHaveLength(800);
     expect(store.logs[0]).toBe("line-5");
     expect(store.logs.at(-1)).toBe("line-804");
+  });
+
+  it("loads display-safe runtime settings from the agent snapshot", async () => {
+    vi.mocked(api.getRuntimeSettings).mockResolvedValue({
+      settings: [
+        {
+          key: "chat_web_search",
+          env_name: "CHAT_WEB_SEARCH",
+          value: true,
+          display_value: "on",
+          source: "db",
+          kind: "bool",
+          minimum: null,
+          maximum: null,
+          empty_allowed: false,
+        },
+      ],
+    });
+    const store = useOperationsStore();
+
+    await store.refreshRuntimeSettings();
+
+    expect(store.runtimeSettings).toMatchObject([
+      { env_name: "CHAT_WEB_SEARCH", display_value: "on", source: "db" },
+    ]);
+    expect(store.runtimeSettingsError).toBeNull();
+    expect(store.lastRuntimeSettingsAt).toBeInstanceOf(Date);
   });
 
   it("records a control result and its post-check in the current session", async () => {

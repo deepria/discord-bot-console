@@ -126,6 +126,11 @@ async def runtime_settings():
     return await agent_get("/settings/runtime")
 
 
+@app.get("/api/settings/audit-events")
+async def runtime_config_audit_events(limit: int = 50):
+    return await agent_get(f"/settings/audit-events?limit={max(1, min(limit, 100))}")
+
+
 @app.post("/api/bot/start")
 async def bot_start():
     return await agent_post("/bot/start")

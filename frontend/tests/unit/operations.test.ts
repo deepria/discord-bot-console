@@ -10,6 +10,7 @@ vi.mock("../../src/services/api", () => ({
     getLogs: vi.fn(),
     getDeployments: vi.fn(),
     getRuntimeSettings: vi.fn(),
+    getRuntimeConfigAuditEvents: vi.fn(),
     control: vi.fn(),
   },
 }));
@@ -124,6 +125,31 @@ describe("operations store", () => {
     ]);
     expect(store.runtimeSettingsError).toBeNull();
     expect(store.lastRuntimeSettingsAt).toBeInstanceOf(Date);
+  });
+
+  it("loads content-free runtime configuration audit events", async () => {
+    vi.mocked(api.getRuntimeConfigAuditEvents).mockResolvedValue({
+      events: [
+        {
+          id: "audit-1",
+          occurred_at: "2026-09-22T06:20:00Z",
+          actor_kind: "discord",
+          actor_id: "1234",
+          action: "runtime_config.set",
+          target: "CHAT_WEB_SEARCH",
+          outcome: "success",
+          request_id: "interaction-1",
+        },
+      ],
+    });
+    const store = useOperationsStore();
+
+    await store.refreshRuntimeConfigAuditEvents();
+
+    expect(store.runtimeConfigAuditEvents).toMatchObject([
+      { target: "CHAT_WEB_SEARCH", outcome: "success" },
+    ]);
+    expect(store.runtimeConfigAuditError).toBeNull();
   });
 
   it("records a control result and its post-check in the current session", async () => {

@@ -36,14 +36,14 @@ python -m venv .venv
 RIO_AGENT_TOKEN=... .venv/bin/uvicorn app:app --reload --port 8000
 ```
 
-### Discord login for control actions
+### 제어 작업용 Discord 로그인
 
-Read-only views work without a login. Bot `START`, `RESTART`, and `STOP` require
-Discord OAuth and a Discord user ID present in the Bot's existing `BOT_ADMIN_IDS`.
-The Console does not maintain a separate administrator list.
+읽기 전용 화면은 로그인 없이 사용할 수 있습니다. Bot `START`, `RESTART`, `STOP`은
+Discord OAuth 로그인과 Bot의 기존 `BOT_ADMIN_IDS`에 포함된 Discord 사용자 ID를 요구합니다.
+Console은 별도의 관리자 목록을 관리하지 않습니다.
 
-Configure these values in the Console service environment and register the exact
-callback URL in the Discord Developer Portal under OAuth2 redirects:
+Console 서비스 환경변수에 아래 값을 설정하고, Discord Developer Portal의
+**OAuth2 Redirects**에 callback URL을 정확히 등록하세요.
 
 ```bash
 RIO_CONSOLE_DISCORD_CLIENT_ID=...
@@ -53,9 +53,9 @@ RIO_CONSOLE_SESSION_SECRET=<at-least-32-random-characters>
 RIO_CONSOLE_SESSION_COOKIE_SECURE=true
 ```
 
-Set `RIO_CONSOLE_SESSION_COOKIE_SECURE=false` only for local HTTP development.
-The browser receives an HttpOnly, signed eight-hour session cookie; Discord OAuth
-access tokens, the client secret, and `RIO_AGENT_TOKEN` are never exposed to it.
+`RIO_CONSOLE_SESSION_COOKIE_SECURE=false`는 로컬 HTTP 개발 환경에서만 사용하세요.
+브라우저에는 HttpOnly·서명·8시간 만료 세션 cookie만 전달됩니다. Discord OAuth access token,
+client secret, `RIO_AGENT_TOKEN`은 브라우저에 노출되지 않습니다.
 
 Run Vite in a second terminal. It proxies `/api` to port 8000.
 

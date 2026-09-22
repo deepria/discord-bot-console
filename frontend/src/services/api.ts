@@ -1,5 +1,7 @@
 import type {
   BotStatus,
+  ConsoleActor,
+  ConsoleAuthStatus,
   ControlAction,
   DeploymentRecord,
   DeploymentsResponse,
@@ -76,6 +78,27 @@ function parseLogs(value: unknown): LogsResponse {
   }
   return {
     logs: value.logs.filter((line): line is string => typeof line === "string"),
+  };
+}
+
+function parseConsoleActor(value: unknown): ConsoleActor | null {
+  if (!isRecord(value) || typeof value.id !== "string") return null;
+  if (value.role !== "admin" && value.role !== "viewer") return null;
+  return { id: value.id, role: value.role };
+}
+
+function parseConsoleAuthStatus(value: unknown): ConsoleAuthStatus {
+  if (!isRecord(value) || typeof value.oauth_enabled !== "boolean") {
+    throw new ApiError("Authentication status response is invalid.");
+  }
+  if (value.actor !== null && parseConsoleActor(value.actor) === null) {
+    throw new ApiError(
+      "Authentication status response contains an invalid actor.",
+    );
+  }
+  return {
+    oauth_enabled: value.oauth_enabled,
+    actor: parseConsoleActor(value.actor),
   };
 }
 
@@ -214,6 +237,28 @@ async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
 }
 
 export const api = {
+  async getAuthStatus(): Promise<ConsoleAuthStatus> {
+    return parseConsoleAuthStatus(await requestJson("/api/auth/me"));
+  },
+  async logout(): Promise<void> {
+    let response: Response;
+    try {
+      response = await fetch("/api/auth/logout", {
+        method: "POST",
+        cache: "no-store",
+      });
+    } catch (error) {
+      throw new ApiError(
+        error instanceof Error ? error.message : "Logout request failed.",
+      );
+    }
+    if (!response.ok) {
+      throw new ApiError(
+        `Logout failed with HTTP ${response.status}.`,
+        response.status,
+      );
+    }
+  },
   async getStatus(): Promise<BotStatus> {
     return parseStatus(await requestJson("/api/status"));
   },

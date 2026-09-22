@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Situation } from "../../domain/situation";
-import type { BotStatus, MonitorId, MonitorStatus } from "../../types/api";
+import type {
+  BotStatus,
+  ConsoleActor,
+  MonitorId,
+  MonitorStatus,
+} from "../../types/api";
 import { formatKst, formatUptime } from "../../utils/format";
 import ActionCard from "../command/ActionCard.vue";
 import StatusBadge from "../common/StatusBadge.vue";
@@ -11,12 +16,15 @@ const props = defineProps<{
   situation: Situation;
   status: BotStatus | null;
   lastStatusAt: Date | null;
+  authActor: ConsoleActor | null;
+  oauthEnabled: boolean;
 }>();
 
 const emit = defineEmits<{
   select: [id: MonitorId];
   office: [];
   settings: [];
+  logout: [];
 }>();
 
 const monitorItems = computed(() => {
@@ -56,9 +64,21 @@ function inspectSituation(): void {
         <button type="button" class="mode-switch" @click="$emit('settings')">
           SETTINGS
         </button>
-        <a class="mode-switch console-auth-link" href="/auth/discord/login">
+        <a
+          v-if="oauthEnabled && !authActor"
+          class="mode-switch console-auth-link"
+          href="/auth/discord/login"
+        >
           DISCORD LOGIN
         </a>
+        <template v-else-if="authActor">
+          <span class="console-auth-actor">
+            DISCORD · {{ authActor.role.toUpperCase() }}
+          </span>
+          <button type="button" class="mode-switch" @click="$emit('logout')">
+            LOG OUT
+          </button>
+        </template>
       </div>
     </header>
 

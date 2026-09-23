@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodically deploy Rio Console main
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=5m
+Persistent=true
+Unit=rio-console-deploy.service
+
+[Install]
+WantedBy=timers.target

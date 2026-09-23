@@ -81,3 +81,37 @@ RIO_AGENT_TOKEN=test-token python -m pytest -q
 ```
 
 The end-to-end suite uses deterministic API and EventSource fixtures. Real Start, Restart, and Stop actions should be verified only against staging or during an approved maintenance window.
+
+## Console deployment status record
+
+`/api/deployments` reads `/run/rio-console/deploy-status.json` through the
+read-only `data` bind mount. The CT 102 deploy service must publish a
+**deployment-status v1** record after every deploy phase; without one, the
+Console intentionally reports deployment verification as `UNKNOWN`, never as
+healthy.
+
+Use `scripts/write_deploy_status.py` from the privileged host deploy service,
+not from the container. It writes the JSON atomically. A successful deploy must
+include matching target/running revisions, a `verified_at` timestamp, and the
+readiness checks that prove the recreated container can serve the Console and
+reach the Control Agent.
+
+```bash
+python scripts/write_deploy_status.py \
+  --file /opt/services/apps/rio-console/data/deploy-status.json \
+  --deployment-id "dep_$(date -u +%Y%m%dT%H%M%SZ)_console_<short-sha>" \
+  --status succeeded --phase readiness \
+  --target-revision <full-sha> --running-revision <full-sha> \
+  --verified-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --check container-http=passed --check agent-connectivity=passed
+```
+
+On build, recreate, revision, or readiness failure, publish `--status failed`
+with the failed phase and a short content-free error. Do not write credentials,
+environment values, user messages, or raw journal output to this record.
+
+`deploy/rio-console-deploy.sh` and its adjacent `.service`/`.timer` files are
+CT 102 installation templates. Review their paths and deploy cadence, then copy
+the unit files to `/etc/systemd/system/`, run `systemctl daemon-reload`, and
+enable the timer during an approved maintenance window. Do not install or invoke
+them from the Console container.

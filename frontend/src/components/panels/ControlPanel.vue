@@ -3,12 +3,19 @@ import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useOperationsStore } from "../../stores/operations";
 import type { ControlAction } from "../../types/api";
+import { formatKst } from "../../utils/format";
 import ConfirmDialog from "../common/ConfirmDialog.vue";
 import CommandTimeline from "../command/CommandTimeline.vue";
 import OperationsHistory from "../command/OperationsHistory.vue";
 
 const store = useOperationsStore();
-const { control, controlPostCheck, operationsHistory } = storeToRefs(store);
+const {
+  control,
+  controlPostCheck,
+  operationsHistory,
+  persistentOperations,
+  persistentOperationsError,
+} = storeToRefs(store);
 const pendingAction = ref<ControlAction | null>(null);
 
 const commandCopy = computed(() => {
@@ -102,6 +109,29 @@ async function confirmExecution(): Promise<void> {
       :post-check="controlPostCheck"
     />
     <OperationsHistory :records="operationsHistory" />
+    <section
+      class="operations-history"
+      aria-labelledby="persistent-operations-title"
+    >
+      <h3 id="persistent-operations-title">PERSISTENT OPERATION AUDIT</h3>
+      <p v-if="persistentOperationsError" class="inline-alert">
+        {{ persistentOperationsError }}
+      </p>
+      <ol v-else-if="persistentOperations.length" class="operation-list">
+        <li
+          v-for="operation in persistentOperations"
+          :key="operation.operation_id"
+        >
+          <strong>{{ operation.kind.toUpperCase() }}</strong>
+          <span
+            >{{ operation.result.toUpperCase() }} /
+            {{ operation.post_check.toUpperCase() }}</span
+          >
+          <small>{{ formatKst(operation.completed_at) }}</small>
+        </li>
+      </ol>
+      <p v-else class="empty-state">영구 제어 이력이 아직 없습니다.</p>
+    </section>
     <ConfirmDialog
       :open="pendingAction !== null"
       :title="commandCopy.title"

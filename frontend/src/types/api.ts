@@ -167,3 +167,17 @@ export interface OperationRecord {
   postCheck: Exclude<PostCheckState, "idle">;
   relatedMonitor: "control";
 }
+
+export interface PersistentOperationRecord {
+  operation_id: string;
+  kind: string;
+  actor_kind: string;
+  actor_id: string;
+  request_id: string;
+  requested_at: string;
+  completed_at: string;
+  result: "success" | "failure";
+  post_check: "healthy" | "failed";
+  service_state: string;
+  error: string | null;
+}

@@ -13,6 +13,7 @@ import type {
   RuntimeEvent,
   RuntimeConfigAuditEvent,
   RuntimeSetting,
+  TracesResponse,
   PolicySetting,
   SceneState,
   OperationRecord,
@@ -75,6 +76,9 @@ export const useOperationsStore = defineStore("operations", () => {
   const logError = ref<string | null>(null);
   const followingLogs = ref(true);
   const unseenLogCount = ref(0);
+  const traces = ref<TracesResponse | null>(null);
+  const tracesError = ref<string | null>(null);
+  const tracesLoading = ref(false);
 
   const control = ref<ControlResult>({
     action: "restart",
@@ -212,6 +216,19 @@ export const useOperationsStore = defineStore("operations", () => {
             : "normal",
         summary: logConnection.value.toUpperCase(),
         badge: unseenLogCount.value || undefined,
+      },
+      traces: {
+        id: "traces",
+        label: "TURN TRACES",
+        severity:
+          tracesError.value || traces.value?.source_status === "UNAVAILABLE"
+            ? "alert"
+            : traces.value?.source_status === "STALE"
+              ? "attention"
+              : "normal",
+        summary: tracesError.value
+          ? "UNAVAILABLE"
+          : (traces.value?.source_status ?? "LOADING"),
       },
       deploy: {
         id: "deploy",
@@ -492,6 +509,20 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
+  async function refreshTraces(): Promise<void> {
+    if (tracesLoading.value) return;
+    tracesLoading.value = true;
+    try {
+      traces.value = await api.getTraces();
+      tracesError.value = null;
+    } catch (error) {
+      tracesError.value =
+        error instanceof Error ? error.message : "Trace request failed.";
+    } finally {
+      tracesLoading.value = false;
+    }
+  }
+
   return {
     status,
     statusError,
@@ -503,6 +534,9 @@ export const useOperationsStore = defineStore("operations", () => {
     selectedMonitor,
     unseenEventCount,
     logs,
+    traces,
+    tracesError,
+    tracesLoading,
     logConnection,
     logError,
     followingLogs,
@@ -538,6 +572,7 @@ export const useOperationsStore = defineStore("operations", () => {
     writePolicySetting,
     writeRuntimeSetting,
     refreshLogs,
+    refreshTraces,
     selectMonitor,
     replaceLogs,
     appendLog,

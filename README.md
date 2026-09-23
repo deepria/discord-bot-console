@@ -55,11 +55,14 @@ RIO_CONSOLE_DISCORD_CLIENT_SECRET=...
 RIO_CONSOLE_DISCORD_REDIRECT_URI=https://console.example/auth/discord/callback
 RIO_CONSOLE_SESSION_SECRET=<at-least-32-random-characters>
 RIO_CONSOLE_SESSION_COOKIE_SECURE=true
+RIO_CONSOLE_IDENTITY_SECRET=<same-secret-configured-on-rio-agent>
 ```
 
 `RIO_CONSOLE_SESSION_COOKIE_SECURE=false`는 로컬 HTTP 개발 환경에서만 사용하세요.
 브라우저에는 HttpOnly·서명·8시간 만료 세션 cookie만 전달됩니다. Discord OAuth access token,
-client secret, `RIO_AGENT_TOKEN`은 브라우저에 노출되지 않습니다.
+client secret, `RIO_AGENT_TOKEN`, `RIO_CONSOLE_IDENTITY_SECRET`은 브라우저에 노출되지 않습니다.
+`RIO_CONSOLE_IDENTITY_SECRET`은 이후 memory metadata detail 요청에서 Console의 OAuth 관리자 identity를
+Agent에 짧은 수명의 HMAC signature로 전달할 때만 사용합니다.
 
 Run Vite in a second terminal. It proxies `/api` to port 8000.
 

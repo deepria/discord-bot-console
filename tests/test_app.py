@@ -91,6 +91,18 @@ def test_runtime_audit_route_preserves_agent_contract(monkeypatch):
     assert response.headers["cache-control"].startswith("no-store")
 
 
+def test_trace_route_preserves_bounded_agent_query(monkeypatch):
+    async def fake_agent_get(path: str):
+        assert path == "/traces?limit=100"
+        return {"source_status": "HEALTHY", "traces": [], "next_cursor": None}
+
+    monkeypatch.setattr(app_module, "agent_get", fake_agent_get)
+    response = client.get("/api/traces?limit=999")
+
+    assert response.status_code == 200
+    assert response.json()["source_status"] == "HEALTHY"
+
+
 def _configure_discord_oauth(monkeypatch):
     monkeypatch.setenv("RIO_CONSOLE_DISCORD_CLIENT_ID", "123456789012345678")
     monkeypatch.setenv("RIO_CONSOLE_DISCORD_CLIENT_SECRET", "client-secret")

@@ -21,6 +21,11 @@ const commands: { id: MonitorId; label: string; keywords: string }[] = [
   { id: "events", label: "Live Events 열기", keywords: "events 이벤트" },
   { id: "logs", label: "Log Stream 열기", keywords: "logs log 로그" },
   {
+    id: "traces",
+    label: "Turn Traces 열기",
+    keywords: "trace turn provider latency token 오류 조사",
+  },
+  {
     id: "deploy",
     label: "Deploy Watch 열기",
     keywords: "deploy deployment 배포",

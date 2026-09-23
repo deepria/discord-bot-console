@@ -15,47 +15,54 @@ const items = computed(
     ].filter(Boolean) as DeploymentRecord[],
 );
 
-function serviceValue(item: DeploymentRecord, key: string): string {
-  const value = item.service?.[key];
-  return value == null ? "-" : String(value);
+function statusLabel(status: DeploymentRecord["status"]): string {
+  return status === "succeeded" ? "HEALTHY" : status.toUpperCase();
 }
 </script>
 
 <template>
   <div class="panel-content deployment-list">
     <p v-if="deploymentsError" class="inline-alert">{{ deploymentsError }}</p>
-    <article v-for="item in items" :key="`${item.component}-${item.revision}`">
+    <article v-for="item in items" :key="item.deployment_id">
       <header>
         <strong>{{ String(item.component ?? "unknown").toUpperCase() }}</strong>
-        <code>{{ item.revision ?? "unknown revision" }}</code>
+        <code>{{ item.running_revision ?? "UNVERIFIED REVISION" }}</code>
       </header>
-      <p v-if="item.available === false">{{ item.detail }}</p>
-      <dl v-else class="data-list compact">
+      <dl class="data-list compact">
         <div>
-          <dt>DEPLOY</dt>
-          <dd>
-            {{
-              item.state ??
-              `${serviceValue(item, "ActiveState")}/${serviceValue(item, "Result")}`
-            }}
-          </dd>
+          <dt>STATUS</dt>
+          <dd>{{ statusLabel(item.status) }}</dd>
         </div>
         <div>
-          <dt>UPDATE</dt>
-          <dd>{{ item.update_available ? "AVAILABLE" : "CURRENT" }}</dd>
+          <dt>PHASE</dt>
+          <dd>{{ item.phase.toUpperCase() }}</dd>
         </div>
         <div>
-          <dt>LOCAL</dt>
-          <dd>{{ item.working_tree_dirty ? "CHANGED" : "CLEAN" }}</dd>
+          <dt>TARGET</dt>
+          <dd>{{ item.target_revision ?? "-" }}</dd>
         </div>
         <div>
-          <dt>LAST</dt>
-          <dd>{{ formatKst(item.at ?? item.last_success_at) }}</dd>
+          <dt>VERIFIED</dt>
+          <dd>{{ formatKst(item.verified_at) }}</dd>
         </div>
       </dl>
+      <p v-if="item.error" class="inline-alert">{{ item.error }}</p>
+      <ul
+        v-if="item.checks.length"
+        class="check-list"
+        aria-label="배포 검증 결과"
+      >
+        <li
+          v-for="check in item.checks"
+          :key="`${item.deployment_id}-${check.name}`"
+        >
+          {{ check.name.toUpperCase() }} / {{ check.status.toUpperCase() }} /
+          {{ formatKst(check.at) }}
+        </li>
+      </ul>
     </article>
     <p v-if="!items.length && !deploymentsError" class="empty-state">
-      배포 상태를 불러오는 중입니다.
+      검증 가능한 배포 상태가 아직 없습니다.
     </p>
     <p class="panel-footnote">
       LAST REFRESH / {{ formatKst(lastDeploymentsAt) }}

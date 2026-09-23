@@ -135,6 +135,110 @@
   gap: 18px;
 }
 
+.unified-status-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.unified-status-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  background: rgba(1, 13, 23, 0.52);
+}
+
+.unified-status-summary p,
+.unified-flow small {
+  margin: 0;
+  color: var(--muted);
+  font: 700 9px/1.45 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.unified-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.unified-status-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.23);
+  background: rgba(1, 13, 23, 0.52);
+}
+
+.unified-status-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+
+.unified-status-card > header > span,
+.unified-flow > span {
+  color: var(--ink);
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+}
+
+.unified-status-card .telemetry-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.unified-status-card .telemetry-value {
+  min-height: 78px;
+  padding: 10px;
+}
+
+.unified-status-card .telemetry-value strong {
+  margin-top: 10px;
+  font-size: clamp(15px, 1.4vw, 21px);
+}
+
+.unified-status-card .data-list {
+  gap: 8px;
+}
+
+.unified-status-card .data-list div {
+  grid-template-columns: 92px minmax(0, 1fr);
+}
+
+.unified-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.unified-flow i {
+  color: var(--accent);
+  font-style: normal;
+}
+
+.unified-flow small {
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .unified-status-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .unified-status-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .telemetry-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -565,6 +669,17 @@
   padding: 0 11px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.check-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  font: 11px/1.5 var(--font-mono);
+}
+
+.check-list li + li {
+  margin-top: 0.35rem;
 }
 
 .control-grid {

@@ -51,7 +51,22 @@ async function mockConsole(
   await page.route("**/api/deployments", (route) =>
     route.fulfill({
       json: {
-        console: { component: "console", state: "success", revision: "test" },
+        console: {
+          schema_version: 1,
+          deployment_id: "dep-console-test",
+          component: "console",
+          target_revision: "test",
+          running_revision: "test",
+          status: "succeeded",
+          phase: "readiness",
+          started_at: "2026-09-23T00:00:00Z",
+          finished_at: "2026-09-23T00:00:02Z",
+          verified_at: "2026-09-23T00:00:02Z",
+          checks: [],
+          previous_revision: null,
+          log_ref: null,
+          error: null,
+        },
         deployments: [],
       },
     }),
@@ -214,9 +229,11 @@ test("places the Office Mode detail panel below the visual stage", async ({
   await page.goto("/");
   await switchToOfficeMode(page);
 
-  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
+  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
   const visualStage = page.locator(".office-visual-stage");
-  const panel = page.getByRole("complementary", { name: "SYSTEM STATUS" });
+  const panel = page.getByRole("complementary", {
+    name: "OPERATIONS STATUS",
+  });
   await expect(panel).toHaveClass(/is-inline/);
   await expect
     .poll(() =>
@@ -239,9 +256,15 @@ test("opens a monitor and shows live operational data", async ({
   await expect(
     page.getByRole("button", { name: "Rio와 대화하기" }),
   ).toBeVisible();
-  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
+  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
   await expect(
-    page.getByRole("heading", { name: "SYSTEM STATUS" }),
+    page.getByRole("heading", { name: "OPERATIONS STATUS" }),
+  ).toBeVisible();
+  await expect(page.getByText("DISCORD / AI", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "통합 서비스 상태" })
+      .getByText("DATA LINK", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("101", { exact: true })).toBeVisible();
   await page.waitForTimeout(400);
@@ -253,7 +276,7 @@ test("opens a monitor and shows live operational data", async ({
   });
   await page.getByRole("button", { name: "상세 패널 닫기" }).click();
   await expect(
-    page.getByRole("heading", { name: "SYSTEM STATUS" }),
+    page.getByRole("heading", { name: "OPERATIONS STATUS" }),
   ).toBeHidden();
 });
 
@@ -290,7 +313,7 @@ test("opens the lower-left control panel", async ({ page }, testInfo) => {
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(
-    page.getByRole("button", { name: /DEPLOY WATCH: READY/ }),
+    page.getByRole("button", { name: /DEPLOY WATCH: HEALTHY/ }),
   ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath(`monitor-leader-${testInfo.project.name}.png`),
@@ -348,14 +371,14 @@ test("toggles a monitor and dismisses it from the room background", async ({
   await page.goto("/");
   await switchToOfficeMode(page);
 
-  const heading = page.getByRole("heading", { name: "SYSTEM STATUS" });
+  const heading = page.getByRole("heading", { name: "OPERATIONS STATUS" });
 
-  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
+  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
   await expect(heading).toBeVisible();
-  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
+  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
   await expect(heading).toBeHidden();
 
-  await selectFromControlPanel(page, /SYSTEM STATUS: ONLINE/);
+  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
   await expect(heading).toBeVisible();
   const stage = page.locator(".office-stage");
   const box = await stage.boundingBox();
@@ -375,7 +398,7 @@ test("uses the alert scene when the bot is offline", async ({ page }) => {
   );
   await page.getByRole("button", { name: "CONTROL PANEL" }).click();
   await expect(
-    page.getByRole("button", { name: /SYSTEM STATUS: OFFLINE/ }),
+    page.getByRole("button", { name: /OPERATIONS STATUS: OFFLINE/ }),
   ).toBeVisible();
 });
 
@@ -393,7 +416,7 @@ test("guides an offline bot investigation from the action card", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "상세 조사" }).click();
   await expect(
-    page.getByRole("heading", { name: "SYSTEM STATUS" }),
+    page.getByRole("heading", { name: "OPERATIONS STATUS" }),
   ).toBeVisible();
 });
 

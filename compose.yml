@@ -1,6 +1,9 @@
 services:
   rio-console:
-    build: .
+    build:
+      context: .
+      args:
+        GIT_REVISION: ${RIO_CONSOLE_GIT_REVISION:-unknown}
     container_name: rio-console
     restart: unless-stopped
     env_file:

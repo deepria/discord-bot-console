@@ -39,14 +39,17 @@ function eventKey(event: RuntimeEvent): string {
 function deploymentFailed(data: DeploymentsResponse | null): boolean {
   if (!data) return false;
   const items = [data.console, ...data.deployments].filter(Boolean);
-  return items.some((item) => {
-    const service = item?.service ?? {};
-    const state = String(
-      item?.state ?? service.ActiveState ?? "",
-    ).toLowerCase();
-    const result = String(service.Result ?? "").toLowerCase();
-    return state.includes("fail") || result.includes("fail");
-  });
+  return items.some((item) => item?.status === "failed");
+}
+
+function deploymentVerificationIncomplete(
+  data: DeploymentsResponse | null,
+): boolean {
+  if (!data) return false;
+  const items = [data.console, ...data.deployments].filter(Boolean);
+  return items.some(
+    (item) => item?.status === "stale" || item?.status === "unknown",
+  );
 }
 
 export const useOperationsStore = defineStore("operations", () => {
@@ -102,6 +105,9 @@ export const useOperationsStore = defineStore("operations", () => {
       online: status.value?.online ?? false,
       eventsError: Boolean(status.value?.events_error),
       deploymentFailed: deploymentFailed(deployments.value),
+      deploymentVerificationIncomplete: deploymentVerificationIncomplete(
+        deployments.value,
+      ),
       deploymentsError: Boolean(deploymentsError.value),
       latencyMs: status.value?.runtime?.latency_ms,
       latencyWarningMs: LATENCY_WARNING_MS,
@@ -149,10 +155,13 @@ export const useOperationsStore = defineStore("operations", () => {
     const systemAlert = !status.value || stale.value || !status.value.online;
     const linkAlert = Boolean(statusError.value || status.value?.events_error);
     const deployAlert = deploymentFailed(deployments.value);
+    const deployVerificationIncomplete = deploymentVerificationIncomplete(
+      deployments.value,
+    );
     return {
       system: {
         id: "system",
-        label: "SYSTEM STATUS",
+        label: "OPERATIONS STATUS",
         severity: systemAlert ? "alert" : "normal",
         summary: !status.value
           ? "UNAVAILABLE"
@@ -205,12 +214,16 @@ export const useOperationsStore = defineStore("operations", () => {
         id: "deploy",
         label: "DEPLOY WATCH",
         severity:
-          deployAlert || deploymentsError.value ? "attention" : "normal",
+          deployAlert || deploymentsError.value || deployVerificationIncomplete
+            ? "attention"
+            : "normal",
         summary: deployAlert
           ? "FAILED"
           : deploymentsError.value
             ? "UNAVAILABLE"
-            : "READY",
+            : deployVerificationIncomplete
+              ? "VERIFY"
+              : "HEALTHY",
       },
       control: {
         id: "control",

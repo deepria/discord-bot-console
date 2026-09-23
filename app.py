@@ -5,6 +5,8 @@ import json
 import os
 import secrets
 import time
+from datetime import datetime, timezone
+from typing import Literal
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -12,7 +14,7 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 
 app = FastAPI(title="Rio Control Center")
 APP_ROOT = Path(__file__).resolve().parent
@@ -27,6 +29,9 @@ AGENT_URL = os.getenv("RIO_AGENT_URL", "http://172.30.1.101:8787")
 AGENT_TOKEN = os.environ["RIO_AGENT_TOKEN"]
 LOCAL_DEPLOY_STATUS_PATH = Path(
     os.getenv("RIO_CONSOLE_DEPLOY_STATUS_PATH", "/run/rio-console/deploy-status.json")
+)
+DEPLOYMENT_STATUS_MAX_AGE_SECONDS = max(
+    60, int(os.getenv("RIO_DEPLOYMENT_STATUS_MAX_AGE_SECONDS", "900"))
 )
 
 HEADERS = {"Authorization": f"Bearer {AGENT_TOKEN}"}
@@ -52,6 +57,41 @@ class RuntimeSettingWrite(BaseModel):
 class PolicySettingWrite(BaseModel):
     value: str
     request_id: str
+
+
+class DeploymentCheck(BaseModel):
+    name: str
+    status: Literal["passed", "failed", "skipped", "unknown"]
+    at: datetime
+    detail: str | None = None
+
+
+class DeploymentStatusRecord(BaseModel):
+    schema_version: Literal[1]
+    deployment_id: str
+    component: str
+    target_revision: str | None = None
+    running_revision: str | None = None
+    status: Literal["queued", "running", "succeeded", "failed", "stale", "unknown"]
+    phase: str
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    verified_at: datetime | None = None
+    checks: list[DeploymentCheck] = Field(default_factory=list)
+    previous_revision: str | None = None
+    log_ref: str | None = None
+    error: str | None = None
+
+
+def unknown_deployment_status(detail: str) -> dict:
+    return DeploymentStatusRecord(
+        schema_version=1,
+        deployment_id="console-observation-unconfigured",
+        component="console",
+        status="unknown",
+        phase="observation",
+        error=detail,
+    ).model_dump(mode="json")
 
 
 def oauth_config() -> OAuthConfig | None:
@@ -292,26 +332,46 @@ def local_deployment_status() -> dict:
     try:
         value = json.loads(LOCAL_DEPLOY_STATUS_PATH.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        return {
-            "component": "console",
-            "available": False,
-            "detail": "Host deployment status has not been configured yet.",
-        }
+        return unknown_deployment_status(
+            "Host deployment status has not been configured yet."
+        )
     except (OSError, json.JSONDecodeError):
-        return {
-            "component": "console",
-            "available": False,
-            "detail": "Host deployment status file is unreadable.",
-        }
-    return (
-        value
-        if isinstance(value, dict)
-        else {
-            "component": "console",
-            "available": False,
-            "detail": "Invalid deployment status data.",
-        }
-    )
+        return unknown_deployment_status("Host deployment status file is unreadable.")
+    try:
+        record = DeploymentStatusRecord.model_validate(value)
+    except ValidationError:
+        return unknown_deployment_status("Invalid deployment status data.")
+
+    if record.component != "console":
+        return unknown_deployment_status("Deployment status component must be console.")
+    if record.status == "succeeded":
+        if not record.target_revision or not record.running_revision:
+            return unknown_deployment_status(
+                "A successful deployment is missing revision attestation."
+            )
+        if record.target_revision != record.running_revision:
+            return unknown_deployment_status(
+                "Deployment target and running revisions do not match."
+            )
+        if record.verified_at is None:
+            return unknown_deployment_status(
+                "A successful deployment is missing its verification time."
+            )
+        if not record.checks or any(check.status != "passed" for check in record.checks):
+            return unknown_deployment_status(
+                "A successful deployment is missing passing readiness checks."
+            )
+        age_seconds = (datetime.now(timezone.utc) - record.verified_at).total_seconds()
+        if age_seconds > DEPLOYMENT_STATUS_MAX_AGE_SECONDS:
+            record.status = "stale"
+            record.error = "Deployment verification is older than the freshness window."
+    return record.model_dump(mode="json")
+
+
+@app.get("/healthz")
+async def healthz():
+    """Container-local readiness probe; it does not expose Agent data."""
+    return {"ready": True}
 
 
 @app.get("/api/status")

@@ -1,0 +1,12 @@
+[Unit]
+Description=Deploy Rio Console and publish deployment verification
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/services/apps/rio-console
+ExecStart=/opt/services/apps/rio-console/deploy/rio-console-deploy.sh
+
+[Install]
+WantedBy=multi-user.target

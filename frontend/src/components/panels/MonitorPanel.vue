@@ -6,9 +6,7 @@ import type { MonitorId } from "../../types/api";
 import ControlPanel from "./ControlPanel.vue";
 import DeployPanel from "./DeployPanel.vue";
 import EventsPanel from "./EventsPanel.vue";
-import LinkPanel from "./LinkPanel.vue";
 import LogsPanel from "./LogsPanel.vue";
-import RuntimePanel from "./RuntimePanel.vue";
 import SystemPanel from "./SystemPanel.vue";
 
 defineProps<{ inline?: boolean }>();
@@ -19,8 +17,8 @@ const panel = ref<HTMLElement | null>(null);
 
 const components: Record<MonitorId, unknown> = {
   system: SystemPanel,
-  link: LinkPanel,
-  runtime: RuntimePanel,
+  link: SystemPanel,
+  runtime: SystemPanel,
   events: EventsPanel,
   logs: LogsPanel,
   deploy: DeployPanel,
@@ -44,7 +42,10 @@ onMounted(() => panel.value?.focus({ preventScroll: true }));
     ref="panel"
     class="monitor-panel"
     :class="{
-      'is-wide': current.id === 'logs' || current.id === 'events',
+      'is-wide':
+        current.id === 'logs' ||
+        current.id === 'events' ||
+        current.id === 'system',
       'is-inline': inline,
     }"
     tabindex="-1"

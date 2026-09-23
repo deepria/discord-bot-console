@@ -10,6 +10,9 @@ RUN npm run build
 
 FROM python:3.13-slim AS runtime
 
+ARG GIT_REVISION=unknown
+LABEL org.opencontainers.image.revision=$GIT_REVISION
+
 WORKDIR /app
 
 COPY requirements.txt .

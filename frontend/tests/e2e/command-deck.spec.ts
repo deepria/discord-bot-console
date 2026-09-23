@@ -51,7 +51,22 @@ async function mockConsole(
   await page.route("**/api/deployments", (route) =>
     route.fulfill({
       json: {
-        console: { component: "console", state: "success", revision: "test" },
+        console: {
+          schema_version: 1,
+          deployment_id: "dep-console-test",
+          component: "console",
+          target_revision: "test",
+          running_revision: "test",
+          status: "succeeded",
+          phase: "readiness",
+          started_at: "2026-09-23T00:00:00Z",
+          finished_at: "2026-09-23T00:00:02Z",
+          verified_at: "2026-09-23T00:00:02Z",
+          checks: [],
+          previous_revision: null,
+          log_ref: null,
+          error: null,
+        },
         deployments: [],
       },
     }),

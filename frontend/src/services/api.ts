@@ -105,8 +105,65 @@ function parseConsoleAuthStatus(value: unknown): ConsoleAuthStatus {
   };
 }
 
+function nullableTimestamp(value: unknown): string | null {
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return null;
+  return value;
+}
+
+function parseDeploymentCheck(
+  value: unknown,
+): DeploymentRecord["checks"][number] | null {
+  if (!isRecord(value) || typeof value.name !== "string") return null;
+  if (
+    value.status !== "passed" &&
+    value.status !== "failed" &&
+    value.status !== "skipped" &&
+    value.status !== "unknown"
+  ) {
+    return null;
+  }
+  const at = nullableTimestamp(value.at);
+  if (at === null) return null;
+  return {
+    name: value.name,
+    status: value.status,
+    at,
+    detail: nullableString(value.detail),
+  };
+}
+
 function parseDeployment(value: unknown): DeploymentRecord | undefined {
-  return isRecord(value) ? (value as DeploymentRecord) : undefined;
+  if (
+    !isRecord(value) ||
+    value.schema_version !== 1 ||
+    typeof value.deployment_id !== "string" ||
+    typeof value.component !== "string" ||
+    typeof value.phase !== "string" ||
+    !Array.isArray(value.checks) ||
+    !["queued", "running", "succeeded", "failed", "stale", "unknown"].includes(
+      String(value.status),
+    )
+  ) {
+    return undefined;
+  }
+  const checks = value.checks.map(parseDeploymentCheck);
+  if (checks.some((check) => check === null)) return undefined;
+  return {
+    schema_version: 1,
+    deployment_id: value.deployment_id,
+    component: value.component,
+    target_revision: nullableString(value.target_revision),
+    running_revision: nullableString(value.running_revision),
+    status: value.status as DeploymentRecord["status"],
+    phase: value.phase,
+    started_at: nullableTimestamp(value.started_at),
+    finished_at: nullableTimestamp(value.finished_at),
+    verified_at: nullableTimestamp(value.verified_at),
+    checks: checks as DeploymentRecord["checks"],
+    previous_revision: nullableString(value.previous_revision),
+    log_ref: nullableString(value.log_ref),
+    error: nullableString(value.error),
+  };
 }
 
 function parseDeployments(value: unknown): DeploymentsResponse {

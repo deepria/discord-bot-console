@@ -47,6 +47,23 @@ abort() {
   exit 1
 }
 
+wait_for_readiness() {
+  local check_name=$1
+  shift
+  local attempt
+  local max_attempts=${RIO_CONSOLE_READINESS_ATTEMPTS:-30}
+
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    if "$@"; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "$check_name did not become ready after ${max_attempts}s" >&2
+  return 1
+}
+
 cd "$APP_DIR"
 PREVIOUS_REVISION=$(git rev-parse HEAD)
 PHASE=fetch
@@ -78,8 +95,8 @@ fi
 
 PHASE=readiness
 write_status running --running-revision "$RUNNING_REVISION"
-docker exec "$CONTAINER" python -c 'import httpx; assert httpx.get("http://127.0.0.1:8000/healthz", timeout=10).status_code == 200'
-docker exec "$CONTAINER" python -c 'import httpx, os; assert httpx.get(os.environ["RIO_AGENT_URL"] + "/health", headers={"Authorization": "Bearer " + os.environ["RIO_AGENT_TOKEN"]}, timeout=10).status_code == 200'
+wait_for_readiness "console health check" docker exec "$CONTAINER" python -c 'import httpx; assert httpx.get("http://127.0.0.1:8000/healthz", timeout=10).status_code == 200'
+wait_for_readiness "agent connectivity check" docker exec "$CONTAINER" python -c 'import httpx, os; assert httpx.get(os.environ["RIO_AGENT_URL"] + "/health", headers={"Authorization": "Bearer " + os.environ["RIO_AGENT_TOKEN"]}, timeout=10).status_code == 200'
 
 write_status succeeded \
   --running-revision "$RUNNING_REVISION" \

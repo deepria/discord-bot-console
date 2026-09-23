@@ -390,6 +390,27 @@
   font: 10px/1.5 var(--font-mono);
 }
 
+.usage-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.usage-controls label,
+.usage-controls button {
+  color: var(--muted);
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.usage-controls select,
+.usage-controls button {
+  margin-left: 5px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: var(--surface-strong);
+  font: inherit;
+}
+
 .settings-panel {
   width: clamp(420px, 44vw, 760px);
 }

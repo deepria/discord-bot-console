@@ -14,6 +14,7 @@ import type {
   RuntimeConfigAuditEvent,
   RuntimeSetting,
   TracesResponse,
+  UsageResponse,
   PolicySetting,
   SceneState,
   OperationRecord,
@@ -79,6 +80,9 @@ export const useOperationsStore = defineStore("operations", () => {
   const traces = ref<TracesResponse | null>(null);
   const tracesError = ref<string | null>(null);
   const tracesLoading = ref(false);
+  const usage = ref<UsageResponse | null>(null);
+  const usageError = ref<string | null>(null);
+  const usageLoading = ref(false);
 
   const control = ref<ControlResult>({
     action: "restart",
@@ -229,6 +233,19 @@ export const useOperationsStore = defineStore("operations", () => {
         summary: tracesError.value
           ? "UNAVAILABLE"
           : (traces.value?.source_status ?? "LOADING"),
+      },
+      usage: {
+        id: "usage",
+        label: "USAGE ANALYTICS",
+        severity:
+          usageError.value || usage.value?.source_status === "UNAVAILABLE"
+            ? "alert"
+            : usage.value?.source_status === "STALE"
+              ? "attention"
+              : "normal",
+        summary: usageError.value
+          ? "UNAVAILABLE"
+          : (usage.value?.source_status ?? "LOADING"),
       },
       deploy: {
         id: "deploy",
@@ -523,6 +540,23 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
+  async function refreshUsage(
+    windowHours = 24,
+    groupBy: "provider" | "model" = "provider",
+  ): Promise<void> {
+    if (usageLoading.value) return;
+    usageLoading.value = true;
+    try {
+      usage.value = await api.getUsage(windowHours, groupBy);
+      usageError.value = null;
+    } catch (error) {
+      usageError.value =
+        error instanceof Error ? error.message : "Usage request failed.";
+    } finally {
+      usageLoading.value = false;
+    }
+  }
+
   return {
     status,
     statusError,
@@ -537,6 +571,9 @@ export const useOperationsStore = defineStore("operations", () => {
     traces,
     tracesError,
     tracesLoading,
+    usage,
+    usageError,
+    usageLoading,
     logConnection,
     logError,
     followingLogs,
@@ -573,6 +610,7 @@ export const useOperationsStore = defineStore("operations", () => {
     writeRuntimeSetting,
     refreshLogs,
     refreshTraces,
+    refreshUsage,
     selectMonitor,
     replaceLogs,
     appendLog,

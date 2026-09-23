@@ -6,7 +6,7 @@ import os
 import secrets
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 from pathlib import Path
 from urllib.parse import urlencode
@@ -420,6 +420,22 @@ async def traces(
 @app.get("/api/traces/{turn_id}")
 async def trace_detail(turn_id: uuid.UUID):
     return await agent_get(f"/traces/{turn_id}")
+
+
+@app.get("/api/analytics/usage")
+async def usage_analytics(
+    window_hours: int = 24,
+    group_by: Literal["provider", "model"] = "provider",
+):
+    window_hours = max(1, min(window_hours, 31 * 24))
+    now = datetime.now(timezone.utc)
+    query = urlencode({
+        "from": (now - timedelta(hours=window_hours)).isoformat().replace("+00:00", "Z"),
+        "to": now.isoformat().replace("+00:00", "Z"),
+        "limit": "500",
+        "group_by": group_by,
+    })
+    return await agent_get(f"/analytics/usage?{query}")
 
 
 @app.get("/api/runtime-events")

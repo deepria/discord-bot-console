@@ -26,6 +26,11 @@ const commands: { id: MonitorId; label: string; keywords: string }[] = [
     keywords: "trace turn provider latency token 오류 조사",
   },
   {
+    id: "usage",
+    label: "Usage Analytics 열기",
+    keywords: "usage analytics provider model token latency 사용량",
+  },
+  {
     id: "deploy",
     label: "Deploy Watch 열기",
     keywords: "deploy deployment 배포",

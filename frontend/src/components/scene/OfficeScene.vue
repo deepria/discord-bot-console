@@ -38,10 +38,12 @@ const controlMenuOpen = ref(false);
 
 const linkLabel = computed(() => props.monitors.link.summary);
 const controlItems = computed(() =>
-  Object.values(props.monitors).sort((left, right) => {
-    const priority = { alert: 0, attention: 1, normal: 2 } as const;
-    return priority[left.severity] - priority[right.severity];
-  }),
+  Object.values(props.monitors)
+    .filter((monitor) => monitor.id !== "link" && monitor.id !== "runtime")
+    .sort((left, right) => {
+      const priority = { alert: 0, attention: 1, normal: 2 } as const;
+      return priority[left.severity] - priority[right.severity];
+    }),
 );
 const currentDialogue = computed<RioDialogue>(() => {
   if (dialogueIndex.value === 0) {

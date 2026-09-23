@@ -16,9 +16,13 @@ The production container builds the frontend in a Node stage and copies only `fr
 
 ## Interaction
 
-- Select one of the seven room monitors to open its operations panel. Select the
+- Select one of the five room monitors to open its operations panel. Select the
   same monitor again, press Escape, use the close button, or select the room
   background to close it.
+- **Operations Status** unifies System Status, Discord / AI, and Data Link in
+  one overview. It shows the current aggregate state, each area's key metrics,
+  the data-flow path, and the last verified response. Use Live Events, Log
+  Stream, and Rio Control for their respective detailed workflows.
 - Select Rio to open the game-style dialogue window. Repeatedly select Rio or
   the dialogue body to advance through the portrait expressions and messages.
 - The official in-game portrait sources and redistribution note are documented

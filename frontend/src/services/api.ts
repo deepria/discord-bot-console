@@ -19,6 +19,7 @@ import type {
   RuntimeStatus,
   TraceRecord,
   TracesResponse,
+  UsageResponse,
 } from "../types/api";
 
 export class ApiError extends Error {
@@ -155,6 +156,55 @@ function parseTraceDetail(value: unknown): TraceRecord[] {
     throw new ApiError("Trace detail response contains an invalid row.");
   }
   return traces as TraceRecord[];
+}
+
+function parseUsage(value: unknown): UsageResponse {
+  if (
+    !isRecord(value) ||
+    !isRecord(value.source) ||
+    !Array.isArray(value.groups) ||
+    (value.group_by !== "provider" && value.group_by !== "model")
+  )
+    throw new ApiError("Usage response is invalid.");
+  if (
+    !["HEALTHY", "STALE", "UNAVAILABLE"].includes(String(value.source_status))
+  )
+    throw new ApiError("Usage source state is invalid.");
+  const groups = value.groups.map((group) => {
+    if (!isRecord(group))
+      throw new ApiError("Usage response contains an invalid group.");
+    const calls = nullableNumber(group.calls);
+    const errors = nullableNumber(group.errors);
+    const totalTokens = nullableNumber(group.total_tokens);
+    const successRate = nullableNumber(group.success_rate);
+    if (
+      calls === null ||
+      errors === null ||
+      totalTokens === null ||
+      successRate === null
+    )
+      throw new ApiError("Usage response contains an invalid group.");
+    return {
+      provider: nullableString(group.provider) ?? undefined,
+      model: nullableString(group.model) ?? undefined,
+      calls,
+      errors,
+      total_tokens: totalTokens,
+      success_rate: successRate,
+      p50_latency_ms: nullableNumber(group.p50_latency_ms),
+      p95_latency_ms: nullableNumber(group.p95_latency_ms),
+    };
+  });
+  return {
+    source_status: value.source_status as UsageResponse["source_status"],
+    source: {
+      status: value.source.status as UsageResponse["source"]["status"],
+      last_success_at: nullableTimestamp(value.source.last_success_at),
+      error_code: nullableString(value.source.error_code),
+    },
+    group_by: value.group_by,
+    groups,
+  };
 }
 
 function parseConsoleActor(value: unknown): ConsoleActor | null {
@@ -502,6 +552,16 @@ export const api = {
   async getTrace(turnId: string): Promise<TraceRecord[]> {
     return parseTraceDetail(
       await requestJson(`/api/traces/${encodeURIComponent(turnId)}`),
+    );
+  },
+  async getUsage(
+    windowHours = 24,
+    groupBy: "provider" | "model" = "provider",
+  ): Promise<UsageResponse> {
+    return parseUsage(
+      await requestJson(
+        `/api/analytics/usage?window_hours=${Math.max(1, Math.min(windowHours, 744))}&group_by=${groupBy}`,
+      ),
     );
   },
   async getDeployments(): Promise<DeploymentsResponse> {

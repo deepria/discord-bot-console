@@ -9,6 +9,7 @@ import EventsPanel from "./EventsPanel.vue";
 import LogsPanel from "./LogsPanel.vue";
 import SystemPanel from "./SystemPanel.vue";
 import TracePanel from "./TracePanel.vue";
+import UsagePanel from "./UsagePanel.vue";
 
 defineProps<{ inline?: boolean }>();
 const emit = defineEmits<{ close: [] }>();
@@ -23,6 +24,7 @@ const components: Record<MonitorId, unknown> = {
   events: EventsPanel,
   logs: LogsPanel,
   traces: TracePanel,
+  usage: UsagePanel,
   deploy: DeployPanel,
   control: ControlPanel,
 };
@@ -48,6 +50,7 @@ onMounted(() => panel.value?.focus({ preventScroll: true }));
         current.id === 'logs' ||
         current.id === 'events' ||
         current.id === 'traces' ||
+        current.id === 'usage' ||
         current.id === 'system',
       'is-inline': inline,
     }"

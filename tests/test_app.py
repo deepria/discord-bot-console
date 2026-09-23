@@ -103,6 +103,19 @@ def test_trace_route_preserves_bounded_agent_query(monkeypatch):
     assert response.json()["source_status"] == "HEALTHY"
 
 
+def test_usage_route_limits_window_and_keeps_agent_grouping(monkeypatch):
+    async def fake_agent_get(path: str):
+        assert path.startswith("/analytics/usage?")
+        assert "group_by=model" in path and "limit=500" in path
+        return {"source_status": "HEALTHY", "group_by": "model", "groups": []}
+
+    monkeypatch.setattr(app_module, "agent_get", fake_agent_get)
+    response = client.get("/api/analytics/usage?window_hours=9999&group_by=model")
+
+    assert response.status_code == 200
+    assert response.json()["group_by"] == "model"
+
+
 def _configure_discord_oauth(monkeypatch):
     monkeypatch.setenv("RIO_CONSOLE_DISCORD_CLIENT_ID", "123456789012345678")
     monkeypatch.setenv("RIO_CONSOLE_DISCORD_CLIENT_SECRET", "client-secret")

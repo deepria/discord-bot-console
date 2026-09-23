@@ -6,6 +6,7 @@ export type MonitorId =
   | "events"
   | "logs"
   | "traces"
+  | "usage"
   | "deploy"
   | "control";
 export type MonitorSeverity = "normal" | "attention" | "alert";
@@ -70,6 +71,28 @@ export interface TracesResponse {
   };
   traces: TraceRecord[];
   next_cursor: string | null;
+}
+
+export interface UsageGroup {
+  provider?: string;
+  model?: string;
+  calls: number;
+  errors: number;
+  total_tokens: number;
+  success_rate: number;
+  p50_latency_ms: number | null;
+  p95_latency_ms: number | null;
+}
+
+export interface UsageResponse {
+  source_status: SourceStatus;
+  source: {
+    status: SourceStatus;
+    last_success_at: string | null;
+    error_code: string | null;
+  };
+  group_by: "provider" | "model";
+  groups: UsageGroup[];
 }
 
 export interface ConsoleActor {

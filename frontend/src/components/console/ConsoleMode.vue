@@ -29,9 +29,9 @@ const emit = defineEmits<{
 
 const monitorItems = computed(() => {
   const priority = { alert: 0, attention: 1, normal: 2 } as const;
-  return Object.values(props.monitors).sort(
-    (left, right) => priority[left.severity] - priority[right.severity],
-  );
+  return Object.values(props.monitors)
+    .filter((monitor) => monitor.id !== "link" && monitor.id !== "runtime")
+    .sort((left, right) => priority[left.severity] - priority[right.severity]);
 });
 
 const statusLabel = computed(() => {

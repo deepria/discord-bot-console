@@ -13,12 +13,10 @@ const input = ref<HTMLInputElement | null>(null);
 const palette = ref<HTMLElement | null>(null);
 
 const commands: { id: MonitorId; label: string; keywords: string }[] = [
-  { id: "system", label: "System Status 열기", keywords: "system status 상태" },
-  { id: "link", label: "Data Link 열기", keywords: "data link 연결" },
   {
-    id: "runtime",
-    label: "Discord / AI 열기",
-    keywords: "discord ai runtime 런타임",
+    id: "system",
+    label: "Operations Status 열기",
+    keywords: "system status discord ai data link 상태 연결 런타임",
   },
   { id: "events", label: "Live Events 열기", keywords: "events 이벤트" },
   { id: "logs", label: "Log Stream 열기", keywords: "logs log 로그" },

@@ -28,6 +28,9 @@ usePolling(() => store.refreshDeployments(), 10000);
 useLogStream();
 
 function selectMonitor(id: MonitorId): void {
+  // Legacy deep links and situation recommendations still resolve into the
+  // single operational overview rather than opening a duplicate panel.
+  if (id === "link" || id === "runtime") id = "system";
   settingsOpen.value = false;
   if (selectedMonitor.value === id) {
     void closePanel();

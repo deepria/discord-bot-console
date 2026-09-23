@@ -305,7 +305,7 @@ test("opens the lower-left control panel", async ({ page }, testInfo) => {
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(
-    page.getByRole("button", { name: /DEPLOY WATCH: READY/ }),
+    page.getByRole("button", { name: /DEPLOY WATCH: HEALTHY/ }),
   ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath(`monitor-leader-${testInfo.project.name}.png`),

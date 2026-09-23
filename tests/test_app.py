@@ -1,5 +1,7 @@
 import os
 import time
+import json
+from datetime import datetime, timedelta, timezone
 
 os.environ.setdefault("RIO_AGENT_TOKEN", "test-token")
 
@@ -145,3 +147,87 @@ def test_unknown_api_route_is_not_rewritten_to_html():
     response = client.get("/api/missing")
 
     assert response.status_code == 404
+
+
+def test_healthz_is_available_without_agent_connectivity():
+    response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"ready": True}
+
+
+def _deployment_status(verified_at: datetime) -> dict:
+    timestamp = verified_at.isoformat().replace("+00:00", "Z")
+    return {
+        "schema_version": 1,
+        "deployment_id": "dep-console-test",
+        "component": "console",
+        "target_revision": "abc1234",
+        "running_revision": "abc1234",
+        "status": "succeeded",
+        "phase": "readiness",
+        "started_at": timestamp,
+        "finished_at": timestamp,
+        "verified_at": timestamp,
+        "checks": [
+            {
+                "name": "container-http",
+                "status": "passed",
+                "at": timestamp,
+            }
+        ],
+        "previous_revision": None,
+        "log_ref": "journal:dep-console-test",
+        "error": None,
+    }
+
+
+def test_local_deployment_status_requires_a_v1_record(monkeypatch, tmp_path):
+    monkeypatch.setattr(app_module, "LOCAL_DEPLOY_STATUS_PATH", tmp_path / "missing.json")
+
+    result = app_module.local_deployment_status()
+
+    assert result["schema_version"] == 1
+    assert result["status"] == "unknown"
+    assert "not been configured" in result["error"]
+
+
+def test_local_deployment_status_marks_expired_verification_stale(monkeypatch, tmp_path):
+    status_path = tmp_path / "deploy-status.json"
+    status_path.write_text(
+        json.dumps(_deployment_status(datetime.now(timezone.utc) - timedelta(hours=1))),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(app_module, "LOCAL_DEPLOY_STATUS_PATH", status_path)
+    monkeypatch.setattr(app_module, "DEPLOYMENT_STATUS_MAX_AGE_SECONDS", 60)
+
+    result = app_module.local_deployment_status()
+
+    assert result["status"] == "stale"
+    assert "freshness window" in result["error"]
+
+
+def test_local_deployment_status_preserves_fresh_verified_success(monkeypatch, tmp_path):
+    status_path = tmp_path / "deploy-status.json"
+    status_path.write_text(
+        json.dumps(_deployment_status(datetime.now(timezone.utc))), encoding="utf-8"
+    )
+    monkeypatch.setattr(app_module, "LOCAL_DEPLOY_STATUS_PATH", status_path)
+
+    result = app_module.local_deployment_status()
+
+    assert result["status"] == "succeeded"
+    assert result["running_revision"] == "abc1234"
+
+
+def test_local_deployment_status_rejects_unattested_success(monkeypatch, tmp_path):
+    status_path = tmp_path / "deploy-status.json"
+    record = _deployment_status(datetime.now(timezone.utc))
+    record["running_revision"] = "def5678"
+    status_path.write_text(json.dumps(record), encoding="utf-8")
+    monkeypatch.setattr(app_module, "LOCAL_DEPLOY_STATUS_PATH", status_path)
+
+    result = app_module.local_deployment_status()
+
+    assert result["status"] == "unknown"
+    assert "do not match" in result["error"]

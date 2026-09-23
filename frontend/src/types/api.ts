@@ -46,19 +46,31 @@ export interface ConsoleAuthStatus {
   actor: ConsoleActor | null;
 }
 
+export type DeploymentStatus =
+  "queued" | "running" | "succeeded" | "failed" | "stale" | "unknown";
+
+export interface DeploymentCheck {
+  name: string;
+  status: "passed" | "failed" | "skipped" | "unknown";
+  at: string;
+  detail: string | null;
+}
+
 export interface DeploymentRecord {
-  component?: string;
-  available?: boolean;
-  detail?: string;
-  revision?: string;
-  state?: string;
-  at?: string;
-  last_success_at?: string;
-  update_available?: boolean;
-  working_tree_dirty?: boolean;
-  service?: Record<string, unknown>;
-  timer?: Record<string, unknown>;
-  [key: string]: unknown;
+  schema_version: 1;
+  deployment_id: string;
+  component: string;
+  target_revision: string | null;
+  running_revision: string | null;
+  status: DeploymentStatus;
+  phase: string;
+  started_at: string | null;
+  finished_at: string | null;
+  verified_at: string | null;
+  checks: DeploymentCheck[];
+  previous_revision: string | null;
+  log_ref: string | null;
+  error: string | null;
 }
 
 export interface DeploymentsResponse {

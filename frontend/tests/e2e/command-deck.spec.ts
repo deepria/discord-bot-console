@@ -51,7 +51,22 @@ async function mockConsole(
   await page.route("**/api/deployments", (route) =>
     route.fulfill({
       json: {
-        console: { component: "console", state: "success", revision: "test" },
+        console: {
+          schema_version: 1,
+          deployment_id: "dep-console-test",
+          component: "console",
+          target_revision: "test",
+          running_revision: "test",
+          status: "succeeded",
+          phase: "readiness",
+          started_at: "2026-09-23T00:00:00Z",
+          finished_at: "2026-09-23T00:00:02Z",
+          verified_at: "2026-09-23T00:00:02Z",
+          checks: [],
+          previous_revision: null,
+          log_ref: null,
+          error: null,
+        },
         deployments: [],
       },
     }),
@@ -290,7 +305,7 @@ test("opens the lower-left control panel", async ({ page }, testInfo) => {
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(
-    page.getByRole("button", { name: /DEPLOY WATCH: READY/ }),
+    page.getByRole("button", { name: /DEPLOY WATCH: HEALTHY/ }),
   ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath(`monitor-leader-${testInfo.project.name}.png`),

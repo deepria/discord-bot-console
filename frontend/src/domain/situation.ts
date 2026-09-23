@@ -21,6 +21,7 @@ export interface SituationInput {
   online: boolean;
   eventsError: boolean;
   deploymentFailed: boolean;
+  deploymentVerificationIncomplete: boolean;
   deploymentsError: boolean;
   latencyMs: number | null | undefined;
   latencyWarningMs: number;
@@ -98,6 +99,20 @@ export function deriveSituation(input: SituationInput): Situation {
       reason: "최근 배포 작업이 실패했습니다.",
       impact: "일부 구성요소가 기대한 revision으로 실행되지 않을 수 있습니다.",
       detail: "DEPLOY WATCH / FAILURE",
+      recommendedMonitor: "deploy",
+      recommendedAction: "inspect",
+    };
+  }
+
+  if (input.deploymentVerificationIncomplete) {
+    return {
+      level: "advisory",
+      scene: "healthy",
+      title: "DEPLOYMENT VERIFICATION INCOMPLETE",
+      reason: "일부 구성요소의 배포 증거가 없거나 최신 검증 시각을 지났습니다.",
+      impact:
+        "실행 중인 revision과 readiness를 배포 화면에서 다시 확인해야 합니다.",
+      detail: "DEPLOY WATCH / VERIFY",
       recommendedMonitor: "deploy",
       recommendedAction: "inspect",
     };

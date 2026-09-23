@@ -11,6 +11,7 @@ const healthy: SituationInput = {
   online: true,
   eventsError: false,
   deploymentFailed: false,
+  deploymentVerificationIncomplete: false,
   deploymentsError: false,
   latencyMs: 42,
   latencyWarningMs: 500,
@@ -56,6 +57,16 @@ describe("deriveSituation", () => {
       level: "advisory",
       scene: "healthy",
       recommendedMonitor: "runtime",
+    });
+  });
+
+  it("treats missing or stale deployment verification as advisory", () => {
+    expect(
+      deriveSituation({ ...healthy, deploymentVerificationIncomplete: true }),
+    ).toMatchObject({
+      level: "advisory",
+      title: "DEPLOYMENT VERIFICATION INCOMPLETE",
+      recommendedMonitor: "deploy",
     });
   });
 });

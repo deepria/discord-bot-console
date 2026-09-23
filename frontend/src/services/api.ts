@@ -17,6 +17,8 @@ import type {
   PolicySettingsResponse,
   PersistentOperationRecord,
   RuntimeStatus,
+  TraceRecord,
+  TracesResponse,
 } from "../types/api";
 
 export class ApiError extends Error {
@@ -83,6 +85,76 @@ function parseLogs(value: unknown): LogsResponse {
   return {
     logs: value.logs.filter((line): line is string => typeof line === "string"),
   };
+}
+
+function parseTrace(value: unknown): TraceRecord | null {
+  if (!isRecord(value)) return null;
+  return {
+    at: nullableString(value.at) ?? undefined,
+    turn_id: nullableString(value.turn_id) ?? undefined,
+    event: nullableString(value.event) ?? undefined,
+    operation: nullableString(value.operation) ?? undefined,
+    status: nullableString(value.status) ?? undefined,
+    provider: nullableString(value.provider) ?? undefined,
+    model: nullableString(value.model) ?? undefined,
+    routing: isRecord(value.routing)
+      ? {
+          web: value.routing.web === true,
+          tier: nullableString(value.routing.tier) ?? undefined,
+        }
+      : undefined,
+    latency_ms: nullableNumber(value.latency_ms) ?? undefined,
+    tokens: isRecord(value.tokens)
+      ? {
+          input: nullableNumber(value.tokens.input) ?? undefined,
+          output: nullableNumber(value.tokens.output) ?? undefined,
+          total: nullableNumber(value.tokens.total) ?? undefined,
+        }
+      : undefined,
+    web_search_calls: nullableNumber(value.web_search_calls) ?? undefined,
+    memory_lifecycle: nullableString(value.memory_lifecycle) ?? undefined,
+    error_type: nullableString(value.error_type),
+  };
+}
+
+function parseTraces(value: unknown): TracesResponse {
+  if (
+    !isRecord(value) ||
+    !isRecord(value.source) ||
+    !Array.isArray(value.traces)
+  )
+    throw new ApiError("Trace response is invalid.");
+  if (
+    !["HEALTHY", "STALE", "UNAVAILABLE"].includes(
+      String(value.source_status),
+    ) ||
+    !["HEALTHY", "STALE", "UNAVAILABLE"].includes(String(value.source.status))
+  )
+    throw new ApiError("Trace source state is invalid.");
+  const traces = value.traces.map(parseTrace);
+  if (traces.some((trace) => trace === null))
+    throw new ApiError("Trace response contains an invalid row.");
+  return {
+    source_status: value.source_status as TracesResponse["source_status"],
+    source: {
+      status: value.source.status as TracesResponse["source"]["status"],
+      last_success_at: nullableTimestamp(value.source.last_success_at),
+      error_code: nullableString(value.source.error_code),
+    },
+    traces: traces as TraceRecord[],
+    next_cursor: nullableString(value.next_cursor),
+  };
+}
+
+function parseTraceDetail(value: unknown): TraceRecord[] {
+  if (!isRecord(value) || !Array.isArray(value.trace)) {
+    throw new ApiError("Trace detail response is invalid.");
+  }
+  const traces = value.trace.map(parseTrace);
+  if (traces.some((trace) => trace === null)) {
+    throw new ApiError("Trace detail response contains an invalid row.");
+  }
+  return traces as TraceRecord[];
 }
 
 function parseConsoleActor(value: unknown): ConsoleActor | null {
@@ -418,6 +490,18 @@ export const api = {
   async getLogs(lines = 100): Promise<LogsResponse> {
     return parseLogs(
       await requestJson(`/api/logs?lines=${Math.max(1, Math.min(lines, 500))}`),
+    );
+  },
+  async getTraces(limit = 50): Promise<TracesResponse> {
+    return parseTraces(
+      await requestJson(
+        `/api/traces?limit=${Math.max(1, Math.min(limit, 100))}`,
+      ),
+    );
+  },
+  async getTrace(turnId: string): Promise<TraceRecord[]> {
+    return parseTraceDetail(
+      await requestJson(`/api/traces/${encodeURIComponent(turnId)}`),
     );
   },
   async getDeployments(): Promise<DeploymentsResponse> {

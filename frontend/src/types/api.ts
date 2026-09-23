@@ -1,6 +1,13 @@
 export type SceneState = "loading" | "healthy" | "alert";
 export type MonitorId =
-  "system" | "link" | "runtime" | "events" | "logs" | "deploy" | "control";
+  | "system"
+  | "link"
+  | "runtime"
+  | "events"
+  | "logs"
+  | "traces"
+  | "deploy"
+  | "control";
 export type MonitorSeverity = "normal" | "attention" | "alert";
 export type ControlAction = "start" | "restart" | "stop";
 export type ConsoleActorRole = "admin" | "viewer";
@@ -34,6 +41,35 @@ export interface BotStatus {
 
 export interface LogsResponse {
   logs: string[];
+}
+
+export type SourceStatus = "HEALTHY" | "STALE" | "UNAVAILABLE";
+
+export interface TraceRecord {
+  at?: string;
+  turn_id?: string;
+  event?: string;
+  operation?: string;
+  status?: string;
+  provider?: string;
+  model?: string;
+  routing?: { web?: boolean; tier?: string };
+  latency_ms?: number;
+  tokens?: { input?: number; output?: number; total?: number };
+  web_search_calls?: number;
+  memory_lifecycle?: string;
+  error_type?: string | null;
+}
+
+export interface TracesResponse {
+  source_status: SourceStatus;
+  source: {
+    status: SourceStatus;
+    last_success_at: string | null;
+    error_code: string | null;
+  };
+  traces: TraceRecord[];
+  next_cursor: string | null;
 }
 
 export interface ConsoleActor {

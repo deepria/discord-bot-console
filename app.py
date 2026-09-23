@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
@@ -396,6 +396,30 @@ async def logs(lines: int = 50):
 async def events(lines: int = 50):
     lines = max(1, min(lines, 500))
     return await agent_get(f"/events?lines={lines}")
+
+
+@app.get("/api/traces")
+async def traces(
+    from_: datetime | None = Query(default=None, alias="from"),
+    to: datetime | None = None,
+    limit: int = 50,
+    cursor: str | None = None,
+):
+    """Proxy bounded, content-free Agent trace metadata only."""
+    limit = max(1, min(limit, 100))
+    query = {"limit": str(limit)}
+    if from_:
+        query["from"] = from_.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    if to:
+        query["to"] = to.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    if cursor:
+        query["cursor"] = cursor
+    return await agent_get(f"/traces?{urlencode(query)}")
+
+
+@app.get("/api/traces/{turn_id}")
+async def trace_detail(turn_id: uuid.UUID):
+    return await agent_get(f"/traces/{turn_id}")
 
 
 @app.get("/api/runtime-events")

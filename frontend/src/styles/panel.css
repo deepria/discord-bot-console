@@ -332,6 +332,64 @@
   letter-spacing: 0.08em;
 }
 
+.trace-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trace-list > li {
+  padding: 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  background: rgba(1, 13, 23, 0.52);
+}
+
+.trace-list header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font: 700 10px/1.3 var(--font-mono);
+}
+
+.trace-list header button {
+  padding: 0;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+.trace-list header button:hover,
+.trace-list header button.is-selected {
+  text-decoration: underline;
+}
+.trace-list header button:disabled {
+  cursor: default;
+  text-decoration: none;
+}
+.trace-list header time {
+  color: var(--muted);
+  text-align: right;
+}
+
+.trace-detail {
+  padding: 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  background: rgba(1, 13, 23, 0.52);
+}
+
+.trace-detail > p:last-child {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font: 10px/1.5 var(--font-mono);
+}
+
 .settings-panel {
   width: clamp(420px, 44vw, 760px);
 }

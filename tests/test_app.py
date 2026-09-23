@@ -30,8 +30,8 @@ def test_status_combines_runtime_events(monkeypatch):
 
 
 def test_control_route_preserves_agent_contract(monkeypatch):
-    async def fake_agent_post(path: str):
-        return {"ok": True, "path": path}
+    async def fake_agent_post(path: str, payload: dict):
+        return {"ok": True, "path": path, "payload": payload}
 
     monkeypatch.setattr(app_module, "agent_post", fake_agent_post)
     monkeypatch.setattr(
@@ -42,7 +42,21 @@ def test_control_route_preserves_agent_contract(monkeypatch):
     response = client.post("/api/bot/restart")
 
     assert response.status_code == 200
-    assert response.json() == {"ok": True, "path": "/bot/restart"}
+    assert response.json()["ok"] is True
+    assert response.json()["path"] == "/bot/restart"
+    assert response.json()["payload"]["actor_id"] == "123456789012345678"
+
+
+def test_operations_route_preserves_agent_contract(monkeypatch):
+    async def fake_agent_get(path: str):
+        assert path == "/operations?limit=50"
+        return {"operations": [{"operation_id": "op-1", "result": "success"}]}
+
+    monkeypatch.setattr(app_module, "agent_get", fake_agent_get)
+    response = client.get("/api/operations")
+
+    assert response.status_code == 200
+    assert response.json()["operations"][0]["operation_id"] == "op-1"
 
 
 def test_control_route_rejects_anonymous_requests():

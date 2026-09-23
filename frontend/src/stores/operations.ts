@@ -16,6 +16,7 @@ import type {
   PolicySetting,
   SceneState,
   OperationRecord,
+  PersistentOperationRecord,
   PostCheckState,
 } from "../types/api";
 
@@ -82,6 +83,8 @@ export const useOperationsStore = defineStore("operations", () => {
   });
   const controlPostCheck = ref<PostCheckState>("idle");
   const operationsHistory = ref<OperationRecord[]>([]);
+  const persistentOperations = ref<PersistentOperationRecord[]>([]);
+  const persistentOperationsError = ref<string | null>(null);
 
   const runtimeSettings = ref<RuntimeSetting[]>([]);
   const runtimeSettingsError = ref<string | null>(null);
@@ -288,6 +291,18 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
+  async function refreshOperations(): Promise<void> {
+    try {
+      persistentOperations.value = (await api.getOperations()).operations;
+      persistentOperationsError.value = null;
+    } catch (error) {
+      persistentOperationsError.value =
+        error instanceof Error
+          ? error.message
+          : "Operation audit request failed.";
+    }
+  }
+
   async function refreshRuntimeSettings(): Promise<void> {
     if (runtimeSettingsLoading.value) return;
     runtimeSettingsLoading.value = true;
@@ -419,7 +434,12 @@ export const useOperationsStore = defineStore("operations", () => {
             ? "봇 중지 요청을 완료했어."
             : `${action === "start" ? "시작" : "재시작"} 요청을 완료했어.`,
       };
-      await Promise.all([refreshStatus(), refreshDeployments(), refreshLogs()]);
+      await Promise.all([
+        refreshStatus(),
+        refreshDeployments(),
+        refreshLogs(),
+        refreshOperations(),
+      ]);
       const postCheckHealthy =
         action === "stop"
           ? status.value?.online === false
@@ -490,6 +510,8 @@ export const useOperationsStore = defineStore("operations", () => {
     control,
     controlPostCheck,
     operationsHistory,
+    persistentOperations,
+    persistentOperationsError,
     runtimeSettings,
     runtimeSettingsError,
     runtimeSettingsLoading,
@@ -509,6 +531,7 @@ export const useOperationsStore = defineStore("operations", () => {
     monitorStatuses,
     refreshStatus,
     refreshDeployments,
+    refreshOperations,
     refreshRuntimeSettings,
     refreshRuntimeConfigAuditEvents,
     refreshPolicySettings,

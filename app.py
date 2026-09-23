@@ -5,6 +5,7 @@ import json
 import os
 import secrets
 import time
+import uuid
 from datetime import datetime, timezone
 from typing import Literal
 from pathlib import Path
@@ -451,22 +452,33 @@ async def runtime_config_audit_events(limit: int = 50):
     return await agent_get(f"/settings/audit-events?limit={max(1, min(limit, 100))}")
 
 
+@app.get("/api/operations")
+async def operations(limit: int = 50):
+    return await agent_get(f"/operations?limit={max(1, min(limit, 100))}")
+
+
 @app.post("/api/bot/start")
 async def bot_start(request: Request):
-    require_admin(request)
-    return await agent_post("/bot/start")
+    actor = require_admin(request)
+    return await agent_post(
+        "/bot/start", {"actor_id": actor["id"], "request_id": str(uuid.uuid4())}
+    )
 
 
 @app.post("/api/bot/stop")
 async def bot_stop(request: Request):
-    require_admin(request)
-    return await agent_post("/bot/stop")
+    actor = require_admin(request)
+    return await agent_post(
+        "/bot/stop", {"actor_id": actor["id"], "request_id": str(uuid.uuid4())}
+    )
 
 
 @app.post("/api/bot/restart")
 async def bot_restart(request: Request):
-    require_admin(request)
-    return await agent_post("/bot/restart")
+    actor = require_admin(request)
+    return await agent_post(
+        "/bot/restart", {"actor_id": actor["id"], "request_id": str(uuid.uuid4())}
+    )
 
 
 @app.get("/api/logs/stream")

@@ -15,6 +15,7 @@ import type {
   RuntimeSettingWriteResult,
   PolicySetting,
   PolicySettingsResponse,
+  PersistentOperationRecord,
   RuntimeStatus,
 } from "../types/api";
 
@@ -176,6 +177,54 @@ function parseDeployments(value: unknown): DeploymentsResponse {
           .filter((item): item is DeploymentRecord => Boolean(item))
       : [],
   };
+}
+
+function parsePersistentOperation(
+  value: unknown,
+): PersistentOperationRecord | null {
+  if (
+    !isRecord(value) ||
+    typeof value.operation_id !== "string" ||
+    typeof value.kind !== "string" ||
+    typeof value.actor_kind !== "string" ||
+    typeof value.actor_id !== "string" ||
+    typeof value.request_id !== "string" ||
+    typeof value.requested_at !== "string" ||
+    typeof value.completed_at !== "string" ||
+    nullableTimestamp(value.requested_at) === null ||
+    nullableTimestamp(value.completed_at) === null ||
+    (value.result !== "success" && value.result !== "failure") ||
+    (value.post_check !== "healthy" && value.post_check !== "failed") ||
+    typeof value.service_state !== "string"
+  ) {
+    return null;
+  }
+  return {
+    operation_id: value.operation_id,
+    kind: value.kind,
+    actor_kind: value.actor_kind,
+    actor_id: value.actor_id,
+    request_id: value.request_id,
+    requested_at: value.requested_at,
+    completed_at: value.completed_at,
+    result: value.result,
+    post_check: value.post_check,
+    service_state: value.service_state,
+    error: nullableString(value.error),
+  };
+}
+
+function parseOperations(value: unknown): {
+  operations: PersistentOperationRecord[];
+} {
+  if (!isRecord(value) || !Array.isArray(value.operations)) {
+    throw new ApiError("Operations response is invalid.");
+  }
+  const operations = value.operations.map(parsePersistentOperation);
+  if (operations.some((operation) => operation === null)) {
+    throw new ApiError("Operations response contains an invalid operation.");
+  }
+  return { operations: operations as PersistentOperationRecord[] };
 }
 
 function parseRuntimeSetting(value: unknown): RuntimeSetting | null {
@@ -373,6 +422,9 @@ export const api = {
   },
   async getDeployments(): Promise<DeploymentsResponse> {
     return parseDeployments(await requestJson("/api/deployments"));
+  },
+  async getOperations(): Promise<{ operations: PersistentOperationRecord[] }> {
+    return parseOperations(await requestJson("/api/operations?limit=50"));
   },
   async getRuntimeSettings(): Promise<RuntimeSettingsResponse> {
     return parseRuntimeSettings(await requestJson("/api/settings/runtime"));

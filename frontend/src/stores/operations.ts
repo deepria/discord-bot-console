@@ -164,7 +164,7 @@ export const useOperationsStore = defineStore("operations", () => {
     return {
       system: {
         id: "system",
-        label: "SYSTEM STATUS",
+        label: "OPERATIONS STATUS",
         severity: systemAlert ? "alert" : "normal",
         summary: !status.value
           ? "UNAVAILABLE"

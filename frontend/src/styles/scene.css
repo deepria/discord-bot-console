@@ -351,6 +351,13 @@
   transform: translateY(5px);
 }
 
+@media (max-width: 760px) {
+  .control-dock-menu {
+    max-height: 38dvh;
+    overflow-y: auto;
+  }
+}
+
 .rio-character-button {
   position: absolute;
   z-index: 6;

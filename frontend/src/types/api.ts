@@ -7,6 +7,7 @@ export type MonitorId =
   | "logs"
   | "traces"
   | "usage"
+  | "memory"
   | "deploy"
   | "control";
 export type MonitorSeverity = "normal" | "attention" | "alert";
@@ -93,6 +94,19 @@ export interface UsageResponse {
   };
   group_by: "provider" | "model";
   groups: UsageGroup[];
+}
+export interface MemoryItem {
+  id: number;
+  owner_id: string;
+  kind: string;
+  disclosure: string;
+  confidence: number;
+  created_at: string;
+}
+export interface MemoryResponse {
+  source_status: SourceStatus;
+  memory: MemoryItem[];
+  next_cursor: number | null;
 }
 
 export interface ConsoleActor {

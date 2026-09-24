@@ -176,12 +176,12 @@ async def prevent_runtime_api_caching(request: Request, call_next):
     return response
 
 
-async def agent_get(path: str):
+async def agent_get(path: str, extra_headers: dict[str, str] | None = None):
     error = "agent request failed"
     for attempt in range(2):
         try:
             async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.get(f"{AGENT_URL}{path}", headers=HEADERS)
+                response = await client.get(f"{AGENT_URL}{path}", headers={**HEADERS, **(extra_headers or {})})
             if response.is_success:
                 return response.json()
             error = f"agent returned HTTP {response.status_code}: {response.text[:300]}"
@@ -436,6 +436,24 @@ async def usage_analytics(
         "group_by": group_by,
     })
     return await agent_get(f"/analytics/usage?{query}")
+
+
+@app.get("/api/memory")
+async def memory_metadata(limit: int = 50, scope: Literal["channel", "owner_private"] | None = None, cursor: int | None = None):
+    query = {"limit": str(max(1, min(limit, 100)))}
+    if scope: query["scope"] = scope
+    if cursor: query["cursor"] = str(cursor)
+    return await agent_get(f"/memory?{urlencode(query)}")
+
+
+@app.get("/api/memory/{item_id}")
+async def memory_detail(item_id: int, request: Request):
+    actor = require_admin(request)
+    secret = os.getenv("RIO_CONSOLE_IDENTITY_SECRET")
+    if not secret: raise HTTPException(status_code=503, detail="Memory detail authorization is unavailable")
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    signature = hmac.new(secret.encode(), f"{actor['id']}.{timestamp}".encode(), "sha256").hexdigest()
+    return await agent_get(f"/memory/{item_id}", {"X-Rio-Actor-Id": actor["id"], "X-Rio-Actor-Timestamp": timestamp, "X-Rio-Actor-Signature": signature})
 
 
 @app.get("/api/runtime-events")

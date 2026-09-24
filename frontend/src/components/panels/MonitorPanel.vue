@@ -10,6 +10,7 @@ import LogsPanel from "./LogsPanel.vue";
 import SystemPanel from "./SystemPanel.vue";
 import TracePanel from "./TracePanel.vue";
 import UsagePanel from "./UsagePanel.vue";
+import MemoryPanel from "./MemoryPanel.vue";
 
 defineProps<{ inline?: boolean }>();
 const emit = defineEmits<{ close: [] }>();
@@ -25,6 +26,7 @@ const components: Record<MonitorId, unknown> = {
   logs: LogsPanel,
   traces: TracePanel,
   usage: UsagePanel,
+  memory: MemoryPanel,
   deploy: DeployPanel,
   control: ControlPanel,
 };

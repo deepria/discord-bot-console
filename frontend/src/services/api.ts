@@ -20,6 +20,7 @@ import type {
   TraceRecord,
   TracesResponse,
   UsageResponse,
+  MemoryResponse,
 } from "../types/api";
 
 export class ApiError extends Error {
@@ -512,6 +513,9 @@ async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
 }
 
 export const api = {
+  async getMemory(): Promise<MemoryResponse> {
+    return (await requestJson("/api/memory?limit=50")) as MemoryResponse;
+  },
   async getAuthStatus(): Promise<ConsoleAuthStatus> {
     return parseConsoleAuthStatus(await requestJson("/api/auth/me"));
   },

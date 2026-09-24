@@ -15,6 +15,7 @@ import type {
   RuntimeSetting,
   TracesResponse,
   UsageResponse,
+  MemoryResponse,
   PolicySetting,
   SceneState,
   OperationRecord,
@@ -83,6 +84,8 @@ export const useOperationsStore = defineStore("operations", () => {
   const usage = ref<UsageResponse | null>(null);
   const usageError = ref<string | null>(null);
   const usageLoading = ref(false);
+  const memory = ref<MemoryResponse | null>(null);
+  const memoryError = ref<string | null>(null);
 
   const control = ref<ControlResult>({
     action: "restart",
@@ -246,6 +249,18 @@ export const useOperationsStore = defineStore("operations", () => {
         summary: usageError.value
           ? "UNAVAILABLE"
           : (usage.value?.source_status ?? "LOADING"),
+      },
+      memory: {
+        id: "memory",
+        label: "MEMORY INDEX",
+        severity: memoryError.value
+          ? "alert"
+          : memory.value?.source_status === "STALE"
+            ? "attention"
+            : "normal",
+        summary: memoryError.value
+          ? "UNAVAILABLE"
+          : (memory.value?.source_status ?? "LOADING"),
       },
       deploy: {
         id: "deploy",
@@ -556,6 +571,15 @@ export const useOperationsStore = defineStore("operations", () => {
       usageLoading.value = false;
     }
   }
+  async function refreshMemory(): Promise<void> {
+    try {
+      memory.value = await api.getMemory();
+      memoryError.value = null;
+    } catch (error) {
+      memoryError.value =
+        error instanceof Error ? error.message : "Memory request failed.";
+    }
+  }
 
   return {
     status,
@@ -574,6 +598,8 @@ export const useOperationsStore = defineStore("operations", () => {
     usage,
     usageError,
     usageLoading,
+    memory,
+    memoryError,
     logConnection,
     logError,
     followingLogs,
@@ -611,6 +637,7 @@ export const useOperationsStore = defineStore("operations", () => {
     refreshLogs,
     refreshTraces,
     refreshUsage,
+    refreshMemory,
     selectMonitor,
     replaceLogs,
     appendLog,

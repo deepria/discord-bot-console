@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { presenceFixture } from "../fixtures/presence";
 import type { BotStatus, ConsoleActor } from "../../src/types/api";
 
 const healthy: BotStatus = {
@@ -111,10 +112,17 @@ async function mockConsole(
   await page.route("**/api/bot/**", (route) =>
     route.fulfill({ json: { ok: true } }),
   );
+  await page.route("**/api/bot/presence**", (route) =>
+    route.fulfill({ json: presenceFixture() }),
+  );
 }
 
 async function selectFromControlPanel(page: Page, name: RegExp): Promise<void> {
-  await page.getByRole("button", { name: "CONTROL PANEL" }).click();
+  const trigger = page.getByRole("button", { name: "CONTROL PANEL" });
+  // Closing a panel restores focus and already opens this menu.
+  if ((await trigger.getAttribute("aria-expanded")) !== "true")
+    await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("button", { name }).click();
 }
 
@@ -465,4 +473,85 @@ test("opens investigation panels through the keyboard command palette", async ({
   await palette.getByRole("button", { name: "Log Stream 열기" }).click();
   await expect(palette).toBeHidden();
   await expect(page.getByRole("heading", { name: "LOG STREAM" })).toBeVisible();
+});
+
+test("admin changes Discord Presence and sees the committed value after reload", async ({
+  page,
+}) => {
+  await mockConsole(page, healthy, { id: "123", role: "admin" });
+  let snapshot = presenceFixture();
+  let writes = 0;
+  await page.route("**/api/bot/presence**", async (route) => {
+    if (route.request().method() === "PUT") {
+      writes++;
+      const payload = route.request().postDataJSON();
+      snapshot = {
+        ...snapshot,
+        configured: {
+          mode: payload.mode,
+          status: payload.status,
+          activity_type: payload.activity_type,
+          activity_text: payload.activity_text,
+        },
+        operation: {
+          request_id: payload.request_id,
+          state: "queued",
+          error: null,
+          completed_at: null,
+        },
+      };
+      await route.fulfill({ status: 202, json: snapshot });
+    } else {
+      if (snapshot.operation?.state === "queued")
+        snapshot = {
+          ...snapshot,
+          last_sent: { ...snapshot.configured },
+          manual: { ...snapshot.configured },
+          operation: { ...snapshot.operation, state: "success" },
+        };
+      await route.fulfill({ json: snapshot });
+    }
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await expect(page.locator("#presence-status")).toHaveValue("dnd");
+  await page.locator("#presence-status").selectOption("online");
+  await page.locator("#presence-activity").selectOption("watching");
+  await page.locator("#presence-text").fill("서버 상태 확인 중");
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Apply", exact: true })
+    .click();
+  await expect(page.locator(".presence-current")).toContainText(
+    "Watching 서버 상태 확인 중",
+  );
+  expect(writes).toBe(1);
+  await page.reload();
+  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await expect(page.locator("#presence-status")).toHaveValue("online");
+  await expect(page.locator("#presence-text")).toHaveValue("서버 상태 확인 중");
+});
+
+test("presence form rejects whitespace and prevents viewer changes", async ({
+  page,
+}) => {
+  await mockConsole(page, healthy, { id: "123", role: "admin" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await page.locator("#presence-text").fill("   ");
+  await expect(
+    page.getByRole("button", { name: "Apply", exact: true }),
+  ).toBeDisabled();
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: { oauth_enabled: true, actor: { id: "456", role: "viewer" } },
+    }),
+  );
+  await page.reload();
+  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await expect(page.locator("#presence-mode")).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Apply", exact: true }),
+  ).toBeDisabled();
 });

@@ -1,6 +1,10 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
-import { api } from "../services/api";
+import { api, ApiError } from "../services/api";
+import type {
+  PresenceConfiguration,
+  PresenceSnapshot,
+} from "../domain/presence";
 import { deriveSituation } from "../domain/situation";
 import type {
   BotStatus,
@@ -57,6 +61,97 @@ function deploymentVerificationIncomplete(
 }
 
 export const useOperationsStore = defineStore("operations", () => {
+  const presence = ref<PresenceSnapshot | null>(null);
+  const presenceError = ref<string | null>(null);
+  const presenceLoading = ref(false);
+  const presencePending = ref(false);
+  const presenceResult = ref<string | null>(null);
+  let presenceRequestId: string | undefined;
+  let presenceSubmission = false;
+  let presenceRevision = 0;
+
+  function adoptPresence(value: PresenceSnapshot): void {
+    presence.value = value;
+    presenceError.value = null;
+    const operation = value.operation;
+    const wasPending = presencePending.value;
+    presencePending.value =
+      operation?.state === "queued" || operation?.state === "applying";
+    if (presencePending.value) presenceRequestId = operation?.request_id;
+    else {
+      presenceRequestId = undefined;
+      if (wasPending && operation)
+        presenceResult.value =
+          operation.state === "success"
+            ? "Discord Presence 전송과 설정 저장을 완료했습니다."
+            : (operation.error ?? "Presence 적용 결과를 확인할 수 없습니다.");
+    }
+  }
+
+  async function refreshPresence(): Promise<void> {
+    if (presenceLoading.value || presenceSubmission) return;
+    presenceLoading.value = true;
+    const revision = presenceRevision;
+    try {
+      const value = await api.getPresence(presenceRequestId);
+      if (revision === presenceRevision) adoptPresence(value);
+    } catch (error) {
+      if (revision !== presenceRevision) return;
+      presenceError.value =
+        error instanceof Error
+          ? error.message
+          : "Presence 조회에 실패했습니다.";
+      if (
+        error instanceof ApiError &&
+        error.status === 404 &&
+        presenceRequestId
+      ) {
+        presenceRequestId = undefined;
+        presencePending.value = false;
+        presenceResult.value =
+          "요청이 등록되지 않았습니다. 최신 상태를 확인하고 다시 적용해 주세요.";
+      }
+    } finally {
+      presenceLoading.value = false;
+    }
+  }
+
+  async function writePresence(value: PresenceConfiguration): Promise<void> {
+    if (
+      presencePending.value ||
+      presenceSubmission ||
+      presenceError.value ||
+      !presence.value?.connected
+    )
+      return;
+    presencePending.value = true;
+    presenceSubmission = true;
+    presenceRevision += 1;
+    presenceRequestId = crypto.randomUUID();
+    presenceResult.value = "Bot에서 적용 결과를 확인하는 중입니다.";
+    try {
+      adoptPresence(await api.setPresence(value, presenceRequestId));
+    } catch (error) {
+      presenceResult.value =
+        error instanceof Error
+          ? error.message
+          : "Presence 변경 요청이 실패했습니다.";
+      if (
+        error instanceof ApiError &&
+        error.status !== null &&
+        error.status >= 400 &&
+        error.status < 500
+      ) {
+        presenceRequestId = undefined;
+        presencePending.value = false;
+      } else {
+        presenceResult.value += " 적용 여부를 다시 확인하고 있습니다.";
+      }
+    } finally {
+      presenceSubmission = false;
+      await refreshPresence();
+    }
+  }
   const status = ref<BotStatus | null>(null);
   const statusError = ref<string | null>(null);
   const stale = ref(false);
@@ -582,6 +677,13 @@ export const useOperationsStore = defineStore("operations", () => {
   }
 
   return {
+    presence,
+    presenceError,
+    presenceLoading,
+    presencePending,
+    presenceResult,
+    refreshPresence,
+    writePresence,
     status,
     statusError,
     stale,

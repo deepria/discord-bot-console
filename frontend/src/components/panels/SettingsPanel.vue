@@ -4,6 +4,9 @@ import { storeToRefs } from "pinia";
 import { useOperationsStore } from "../../stores/operations";
 import { formatKst } from "../../utils/format";
 import ConfirmDialog from "../common/ConfirmDialog.vue";
+import PresencePanel from "./PresencePanel.vue";
+
+defineProps<{ canManagePresence?: boolean }>();
 
 const emit = defineEmits<{ close: [] }>();
 const store = useOperationsStore();
@@ -142,6 +145,7 @@ onMounted(() => {
       {{ runtimeSettingsLoading ? "LOADING" : "READ ONLY / AGENT SNAPSHOT" }}
     </div>
     <div class="panel-content stack">
+      <PresencePanel :can-manage="canManagePresence ?? false" />
       <p class="panel-footnote">
         Discord `/config`과 같은 runtime override 상태입니다. 변경은 관리자 확인
         뒤 Bot의 동일한 검증 서비스로 적용됩니다.

@@ -4,9 +4,11 @@ import { useOperationsStore } from "../../stores/operations";
 import { formatKst, formatUptime } from "../../utils/format";
 import TelemetryValue from "../common/TelemetryValue.vue";
 import StatusBadge from "../common/StatusBadge.vue";
+import { STATUS_LABELS, ACTIVITY_LABELS } from "../../domain/presence";
 
 const store = useOperationsStore();
 const { status, stale, statusError, lastStatusAt } = storeToRefs(store);
+const { presence, presenceError } = storeToRefs(store);
 
 function linkSeverity(): "normal" | "alert" {
   return statusError.value || stale.value ? "alert" : "normal";
@@ -22,6 +24,19 @@ function runtimeSeverity(): "normal" | "attention" {
 <template>
   <div class="panel-content unified-status-content">
     <p v-if="statusError" class="inline-alert">{{ statusError }}</p>
+    <p v-if="presence?.last_sent" class="panel-footnote">
+      DISCORD PRESENCE / {{ STATUS_LABELS[presence.last_sent.status] }} /
+      {{ ACTIVITY_LABELS[presence.last_sent.activity_type] }}
+      {{ presence.last_sent.activity_text }} /
+      {{
+        presenceError
+          ? "STALE"
+          : presence.connected && presence.apply_state === "sent"
+            ? "LAST SENT"
+            : "현재 적용 확인 불가"
+      }}
+      · SETTINGS에서 관리
+    </p>
     <section class="unified-status-summary" aria-label="전체 상태 요약">
       <StatusBadge
         :label="

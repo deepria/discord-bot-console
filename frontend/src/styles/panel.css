@@ -493,6 +493,34 @@
   border: 1px solid rgba(var(--accent-rgb), 0.35);
 }
 
+.presence-current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.presence-dot {
+  font-size: 16px;
+}
+.presence-online {
+  color: #43b581;
+}
+.presence-idle {
+  color: #faa61a;
+}
+.presence-dnd {
+  color: #f04747;
+}
+.presence-invisible {
+  color: #99aab5;
+}
+.presence-panel input,
+.presence-panel select {
+  width: 100%;
+  min-width: 0;
+}
+
 @media (max-width: 540px) {
   .settings-panel {
     width: min(100%, 100vw);

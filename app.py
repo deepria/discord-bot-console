@@ -13,9 +13,9 @@ from urllib.parse import urlencode
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 app = FastAPI(title="Rio Control Center")
 APP_ROOT = Path(__file__).resolve().parent
@@ -58,6 +58,15 @@ class RuntimeSettingWrite(BaseModel):
 class PolicySettingWrite(BaseModel):
     value: str
     request_id: str
+
+
+class PresenceWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mode: Literal["auto", "manual"]
+    status: Literal["online", "idle", "dnd", "invisible"]
+    activity_type: Literal["playing", "watching", "listening"]
+    activity_text: str = Field(min_length=1, max_length=128)
+    request_id: uuid.UUID
 
 
 class DeploymentCheck(BaseModel):
@@ -202,27 +211,45 @@ async def agent_post(path: str, payload: dict | None = None):
     return response.json()
 
 
-async def agent_write(method: str, path: str, payload: dict):
+async def agent_write(method: str, path: str, payload: dict | None):
+    subject = "Bot Presence" if path.startswith("/bot/presence") else "Runtime settings"
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             response = await client.request(method, f"{AGENT_URL}{path}", headers=HEADERS, json=payload)
     except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail="Runtime settings agent is unavailable") from exc
+        raise HTTPException(status_code=502, detail=f"{subject} agent is unavailable") from exc
     if response.is_success:
         try:
             return response.json()
         except ValueError as exc:
-            raise HTTPException(status_code=502, detail="Runtime settings agent returned invalid JSON") from exc
-    if response.status_code in {400, 401, 403}:
+            raise HTTPException(status_code=502, detail=f"{subject} agent returned invalid JSON") from exc
+    if response.status_code in {400, 401, 403, 404, 409, 422, 503}:
         try:
             detail = response.json().get("detail")
         except ValueError:
             detail = None
         raise HTTPException(
             status_code=response.status_code,
-            detail=detail if isinstance(detail, str) and len(detail) <= 300 else "Runtime settings request failed",
+            detail=detail if isinstance(detail, str) and len(detail) <= 300 else f"{subject} request failed",
         )
-    raise HTTPException(status_code=502, detail="Runtime settings agent request failed")
+    raise HTTPException(status_code=502, detail=f"{subject} agent request failed")
+
+
+@app.get("/api/bot/presence")
+async def bot_presence(request_id: uuid.UUID | None = None):
+    path = "/bot/presence" + (f"?request_id={request_id}" if request_id else "")
+    # Unlike status polling, retain safe Presence errors (unconfigured/disconnected/not found).
+    return await agent_write("GET", path, None)
+
+
+@app.put("/api/bot/presence")
+async def set_bot_presence(write: PresenceWrite, request: Request):
+    actor = require_admin(request)
+    result = await agent_write("PUT", "/bot/presence", {
+        **write.model_dump(mode="json"), "actor_id": actor["id"],
+    })
+    pending = result.get("operation", {}).get("state") in {"queued", "applying"}
+    return JSONResponse(result, status_code=202 if pending else 200)
 
 
 @app.get("/auth/discord/login")

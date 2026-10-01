@@ -24,6 +24,7 @@ const oauthEnabled = ref(false);
 let paletteTrigger: HTMLElement | null = null;
 
 usePolling(() => store.refreshStatus(), 5000);
+usePolling(() => store.refreshPresence(), 5000);
 usePolling(() => store.refreshDeployments(), 10000);
 useLogStream();
 
@@ -184,7 +185,11 @@ async function closePanel(): Promise<void> {
       />
     </Transition>
     <Transition name="panel-slide">
-      <SettingsPanel v-if="settingsOpen" @close="closeSettings" />
+      <SettingsPanel
+        v-if="settingsOpen"
+        :can-manage-presence="authActor?.role === 'admin'"
+        @close="closeSettings"
+      />
     </Transition>
     <CommandPalette
       :open="paletteOpen"

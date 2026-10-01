@@ -22,6 +22,15 @@ import type {
   UsageResponse,
   MemoryResponse,
 } from "../types/api";
+import {
+  PRESENCE_STATUSES,
+  PRESENCE_ACTIVITIES,
+  PRESENCE_MODES,
+  PRESENCE_OPERATIONS,
+  presenceTextError,
+  type PresenceConfiguration,
+  type PresenceSnapshot,
+} from "../domain/presence";
 
 export class ApiError extends Error {
   constructor(
@@ -489,6 +498,118 @@ function parseRuntimeConfigAudit(value: unknown): RuntimeConfigAuditResponse {
   return { events };
 }
 
+function parsePresenceConfiguration(value: unknown): PresenceConfiguration {
+  if (
+    !isRecord(value) ||
+    !PRESENCE_MODES.includes(value.mode as PresenceConfiguration["mode"]) ||
+    !PRESENCE_STATUSES.includes(
+      value.status as PresenceConfiguration["status"],
+    ) ||
+    !PRESENCE_ACTIVITIES.includes(
+      value.activity_type as PresenceConfiguration["activity_type"],
+    ) ||
+    typeof value.activity_text !== "string" ||
+    presenceTextError(value.activity_text, 128)
+  ) {
+    throw new ApiError("Presence configuration response is invalid.");
+  }
+  return {
+    mode: value.mode as PresenceConfiguration["mode"],
+    status: value.status as PresenceConfiguration["status"],
+    activity_type:
+      value.activity_type as PresenceConfiguration["activity_type"],
+    activity_text: value.activity_text,
+  };
+}
+
+function parsePresence(value: unknown): PresenceSnapshot {
+  if (
+    !isRecord(value) ||
+    typeof value.connected !== "boolean" ||
+    !["pending", "sent", "unknown", "unavailable"].includes(
+      String(value.apply_state),
+    ) ||
+    !isRecord(value.capabilities) ||
+    !Array.isArray(value.capabilities.statuses) ||
+    !value.capabilities.statuses.every((item) =>
+      PRESENCE_STATUSES.includes(item),
+    ) ||
+    !Array.isArray(value.capabilities.activity_types) ||
+    !value.capabilities.activity_types.every((item) =>
+      PRESENCE_ACTIVITIES.includes(item),
+    ) ||
+    !Number.isInteger(value.capabilities.text_max_length) ||
+    Number(value.capabilities.text_max_length) < 1 ||
+    Number(value.capabilities.text_max_length) > 128 ||
+    !Array.isArray(value.audit)
+  ) {
+    throw new ApiError("Presence response is invalid.");
+  }
+  const operation = value.operation;
+  if (
+    operation !== null &&
+    (!isRecord(operation) ||
+      typeof operation.request_id !== "string" ||
+      !PRESENCE_OPERATIONS.includes(
+        operation.state as NonNullable<PresenceSnapshot["operation"]>["state"],
+      ) ||
+      (operation.error !== null && typeof operation.error !== "string"))
+  ) {
+    throw new ApiError("Presence operation response is invalid.");
+  }
+  const audit = value.audit.map((item) => {
+    if (
+      !isRecord(item) ||
+      ![
+        "request_id",
+        "actor_kind",
+        "actor_id",
+        "action",
+        "outcome",
+        "occurred_at",
+      ].every((key) => typeof item[key] === "string") ||
+      !nullableTimestamp(item.occurred_at)
+    ) {
+      throw new ApiError("Presence audit response is invalid.");
+    }
+    return {
+      request_id: String(item.request_id),
+      actor_kind: String(item.actor_kind),
+      actor_id: String(item.actor_id),
+      action: String(item.action),
+      outcome: String(item.outcome),
+      occurred_at: String(item.occurred_at),
+    };
+  });
+  return {
+    configured: parsePresenceConfiguration(value.configured),
+    manual: parsePresenceConfiguration(value.manual),
+    last_sent:
+      value.last_sent === null
+        ? null
+        : parsePresenceConfiguration(value.last_sent),
+    last_sent_at: nullableTimestamp(value.last_sent_at),
+    connected: value.connected,
+    apply_state: value.apply_state as PresenceSnapshot["apply_state"],
+    operation: isRecord(operation)
+      ? {
+          request_id: String(operation.request_id),
+          state: operation.state as NonNullable<
+            PresenceSnapshot["operation"]
+          >["state"],
+          error: nullableString(operation.error),
+          completed_at: nullableTimestamp(operation.completed_at),
+        }
+      : null,
+    capabilities: {
+      statuses: value.capabilities.statuses,
+      activity_types: value.capabilities.activity_types,
+      text_max_length: Number(value.capabilities.text_max_length),
+    },
+    audit,
+  };
+}
+
 async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
   let response: Response;
   try {
@@ -500,8 +621,18 @@ async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
   }
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
+    let message = detail;
+    try {
+      const body: unknown = JSON.parse(detail);
+      if (isRecord(body) && typeof body.detail === "string")
+        message = body.detail;
+      else if (isRecord(body) && Array.isArray(body.detail))
+        message = "입력값이 올바르지 않습니다. 형식과 길이를 확인해 주세요.";
+    } catch {
+      /* Non-JSON upstream errors retain the existing bounded message. */
+    }
     throw new ApiError(
-      detail || `Request failed with HTTP ${response.status}.`,
+      message || `Request failed with HTTP ${response.status}.`,
       response.status,
     );
   }
@@ -513,6 +644,26 @@ async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
 }
 
 export const api = {
+  async getPresence(requestId?: string): Promise<PresenceSnapshot> {
+    return parsePresence(
+      await requestJson(
+        "/api/bot/presence" +
+          (requestId ? `?request_id=${encodeURIComponent(requestId)}` : ""),
+      ),
+    );
+  },
+  async setPresence(
+    value: PresenceConfiguration,
+    requestId: string,
+  ): Promise<PresenceSnapshot> {
+    return parsePresence(
+      await requestJson("/api/bot/presence", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...value, request_id: requestId }),
+      }),
+    );
+  },
   async getMemory(): Promise<MemoryResponse> {
     return (await requestJson("/api/memory?limit=50")) as MemoryResponse;
   },

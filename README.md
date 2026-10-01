@@ -122,3 +122,19 @@ CT 102 installation templates. Review their paths and deploy cadence, then copy
 the unit files to `/etc/systemd/system/`, run `systemctl daemon-reload`, and
 enable the timer during an approved maintenance window. Do not install or invoke
 them from the Console container.
+
+## Discord Presence
+
+Runtime Settings includes a Discord Presence section. An authenticated Discord admin
+can choose Manual/Auto, Online/Idle/Do Not Disturb/Invisible, Playing/Watching/Listening,
+and a 1–128 Unicode code point activity text. Streaming and workload-specific Auto
+rules are deferred. Auto applies Online / Playing 대기 중; Manual persists across Bot
+restart. Presence status is independent of service availability.
+
+`GET /api/bot/presence` proxies the Agent snapshot. `PUT /api/bot/presence` uses the
+existing admin session and passes the server-derived actor ID and client request UUID
+to the Agent. Accepted writes return 202; the Console polls the request until its
+outcome is known. The page shows last sent state, connection/freshness, pending and
+uncertain outcomes, and content-free change history. Failed polling retains the last
+snapshot and disables writes. Bot and Agent Presence support must be deployed before
+the Console; rebuilding the existing Docker image includes the frontend changes.

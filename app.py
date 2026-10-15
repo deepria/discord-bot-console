@@ -473,6 +473,11 @@ async def memory_metadata(limit: int = 50, scope: Literal["channel", "owner_priv
     return await agent_get(f"/memory?{urlencode(query)}")
 
 
+@app.get("/api/memory/evaluation")
+async def memory_evaluation():
+    return await agent_get("/memory/evaluation")
+
+
 @app.get("/api/memory/{item_id}")
 async def memory_detail(item_id: int, request: Request):
     actor = require_admin(request)

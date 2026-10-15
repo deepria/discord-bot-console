@@ -109,6 +109,36 @@ export interface MemoryResponse {
   next_cursor: number | null;
 }
 
+export interface MemoryEvaluationResponse {
+  checked_at: string;
+  source: TracesResponse["source"];
+  evaluation: {
+    source_status: "HEALTHY" | "UNAVAILABLE";
+    items: {
+      total: number;
+      active: number;
+      superseded: number;
+      deleted: number;
+      other_status: number;
+    };
+    provenance: {
+      active_message_linked: number;
+      active_turn_linked: number;
+    };
+    observation: {
+      first_item_at: string | null;
+      last_item_at: string | null;
+      elapsed_days: number;
+    };
+    readiness: {
+      minimum_active_items: number;
+      minimum_days: number;
+      ready_for_metadata_review: boolean;
+      reasons: string[];
+    };
+  };
+}
+
 export interface ConsoleActor {
   id: string;
   role: ConsoleActorRole;

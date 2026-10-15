@@ -12,6 +12,32 @@ afterEach(() => {
 });
 
 describe("Memory content client", () => {
+  it("interprets SQLite list timestamps as UTC to match detail timestamps", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            source_status: "HEALTHY",
+            next_cursor: null,
+            memory: [
+              {
+                id: 1,
+                owner_id: "99",
+                kind: "fact",
+                disclosure: "owner_private",
+                confidence: 0.9,
+                created_at: "2026-10-01 12:00:00",
+              },
+            ],
+          }),
+        ),
+      ),
+    );
+    expect((await api.getMemory()).memory[0]!.created_at).toBe(
+      "2026-10-01T12:00:00Z",
+    );
+  });
   it("explicitly asks for content without sending a browser actor claim", async () => {
     const fetch = vi
       .fn()

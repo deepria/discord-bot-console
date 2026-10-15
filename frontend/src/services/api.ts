@@ -242,8 +242,14 @@ function parseConsoleAuthStatus(value: unknown): ConsoleAuthStatus {
 }
 
 function nullableTimestamp(value: unknown): string | null {
-  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return null;
-  return value;
+  if (typeof value !== "string") return null;
+  // SQLite CURRENT_TIMESTAMP is UTC, even though its text has no timezone suffix.
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(
+    value,
+  )
+    ? value.replace(" ", "T") + "Z"
+    : value;
+  return Number.isNaN(Date.parse(normalized)) ? null : normalized;
 }
 
 function parseDeploymentCheck(
@@ -860,7 +866,16 @@ export const api = {
     );
   },
   async getMemory(): Promise<MemoryResponse> {
-    return (await requestJson("/api/memory?limit=50")) as MemoryResponse;
+    const result = (await requestJson(
+      "/api/memory?limit=50",
+    )) as MemoryResponse;
+    return {
+      ...result,
+      memory: result.memory.map((item) => ({
+        ...item,
+        created_at: nullableTimestamp(item.created_at) ?? item.created_at,
+      })),
+    };
   },
   async getMemoryDetail(itemId: number): Promise<MemoryDetailResponse> {
     const result = parseMemoryDetail(

@@ -629,16 +629,25 @@ async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
     );
   }
   if (!response.ok) {
-    const detail = (await response.text()).slice(0, 300);
-    let message = detail;
+    const fallback =
+      response.status >= 500
+        ? `서버 응답을 받지 못했습니다 (HTTP ${response.status}). 잠시 후 다시 시도해 주세요.`
+        : `요청을 처리하지 못했습니다 (HTTP ${response.status}).`;
+    // Proxy/CDN HTML is diagnostic markup, not a message for the user.
+    // Parse the complete JSON before bounding its detail so long validation
+    // responses are not truncated into invalid JSON.
+    const text = await response.text();
+    let message = fallback;
     try {
-      const body: unknown = JSON.parse(detail);
-      if (isRecord(body) && typeof body.detail === "string")
-        message = body.detail;
-      else if (isRecord(body) && Array.isArray(body.detail))
+      const body: unknown = JSON.parse(text);
+      if (isRecord(body) && typeof body.detail === "string") {
+        const detail = body.detail.trim();
+        if (detail && !/<(?:!doctype|[a-z][\s>])/i.test(detail))
+          message = detail.slice(0, 300);
+      } else if (isRecord(body) && Array.isArray(body.detail))
         message = "입력값이 올바르지 않습니다. 형식과 길이를 확인해 주세요.";
     } catch {
-      /* Non-JSON upstream errors retain the existing bounded message. */
+      // Unstructured upstream bodies are intentionally omitted.
     }
     throw new ApiError(
       message || `Request failed with HTTP ${response.status}.`,

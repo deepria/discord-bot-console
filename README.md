@@ -40,9 +40,14 @@ python -m venv .venv
 RIO_AGENT_TOKEN=... .venv/bin/uvicorn app:app --reload --port 8000
 ```
 
+Python dependencies are pinned in `requirements.txt` (runtime) and
+`requirements-dev.txt` (tests). Deployment records and Presence validation require
+Pydantic 2. CI and Docker install the same runtime requirements; update pins together
+and run `python -m pip check` and the backend tests when changing them.
+
 ### 제어 작업용 Discord 로그인
 
-읽기 전용 화면은 로그인 없이 사용할 수 있습니다. Bot `START`, `RESTART`, `STOP`은
+읽기 전용 화면은 로그인 없이 사용할 수 있습니다. Bot 제어와 Runtime Settings·정책·Presence 변경은
 Discord OAuth 로그인과 Bot의 기존 `BOT_ADMIN_IDS`에 포함된 Discord 사용자 ID를 요구합니다.
 Console은 별도의 관리자 목록을 관리하지 않습니다.
 

@@ -40,16 +40,14 @@ describe("API error messages", () => {
   it("handles a validation response longer than the message limit", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response(
-            JSON.stringify({
-              detail: [{ msg: "invalid".repeat(100), input: "private input" }],
-            }),
-            { status: 422 },
-          ),
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            detail: [{ msg: "invalid".repeat(100), input: "private input" }],
+          }),
+          { status: 422 },
         ),
+      ),
     );
     await expect(api.getMemoryDetail(38)).rejects.toThrow(
       "입력값이 올바르지 않습니다.",

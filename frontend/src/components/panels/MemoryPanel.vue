@@ -208,6 +208,7 @@ onMounted(() => void store.refreshMemory());
         <div class="settings-actions">
           <button
             type="button"
+            class="control-button"
             :disabled="
               !canReadContent || (detailLoading && selectedId === item.id)
             "
@@ -222,6 +223,7 @@ onMounted(() => void store.refreshMemory());
           <button
             v-if="selectedId === item.id"
             type="button"
+            class="control-button"
             @click="closeDetail"
           >
             내용 닫기

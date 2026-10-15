@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { presenceFixture } from "../fixtures/presence";
+import { memoryEvaluationFixture } from "../fixtures/memoryEvaluation";
 import type { BotStatus, ConsoleActor } from "../../src/types/api";
 
 const healthy: BotStatus = {
@@ -554,4 +555,40 @@ test("presence form rejects whitespace and prevents viewer changes", async ({
   await expect(
     page.getByRole("button", { name: "Apply", exact: true }),
   ).toBeDisabled();
+});
+
+test("public Memory panel shows screening progress after reload and retains stale evidence on failure", async ({
+  page,
+}) => {
+  await mockConsole(page);
+  await page.route("**/api/memory?**", (route) =>
+    route.fulfill({
+      json: { source_status: "HEALTHY", memory: [], next_cursor: null },
+    }),
+  );
+  let fail = false;
+  let writes = 0;
+  await page.route("**/api/memory/evaluation", (route) => {
+    if (route.request().method() !== "GET") writes++;
+    return fail
+      ? route.fulfill({
+          status: 503,
+          json: { detail: "Memory 평가 연결 실패" },
+        })
+      : route.fulfill({ json: memoryEvaluationFixture() });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
+  const panel = page.getByRole("region", { name: "기억 평가 준비 상태" });
+  await expect(panel).toContainText("38 / 50건");
+  await expect(panel).toContainText("평가 자료 수집 중");
+  await page.reload();
+  await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
+  await expect(panel).toContainText("38 / 50건");
+  fail = true;
+  await panel.getByRole("button", { name: "새로고침" }).click();
+  await expect(panel).toContainText("STALE · 마지막 조회 결과");
+  await expect(panel).toContainText("38 / 50건");
+  await expect(panel).toContainText("Memory 평가 연결 실패");
+  expect(writes).toBe(0);
 });

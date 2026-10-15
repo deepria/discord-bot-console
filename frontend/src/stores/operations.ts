@@ -20,6 +20,7 @@ import type {
   TracesResponse,
   UsageResponse,
   MemoryResponse,
+  MemoryEvaluationResponse,
   PolicySetting,
   SceneState,
   OperationRecord,
@@ -181,6 +182,9 @@ export const useOperationsStore = defineStore("operations", () => {
   const usageLoading = ref(false);
   const memory = ref<MemoryResponse | null>(null);
   const memoryError = ref<string | null>(null);
+  const memoryEvaluation = ref<MemoryEvaluationResponse | null>(null);
+  const memoryEvaluationError = ref<string | null>(null);
+  const memoryEvaluationLoading = ref(false);
 
   const control = ref<ControlResult>({
     action: "restart",
@@ -666,7 +670,7 @@ export const useOperationsStore = defineStore("operations", () => {
       usageLoading.value = false;
     }
   }
-  async function refreshMemory(): Promise<void> {
+  async function refreshMemoryMetadata(): Promise<void> {
     try {
       memory.value = await api.getMemory();
       memoryError.value = null;
@@ -674,6 +678,26 @@ export const useOperationsStore = defineStore("operations", () => {
       memoryError.value =
         error instanceof Error ? error.message : "Memory request failed.";
     }
+  }
+
+  async function refreshMemoryEvaluation(): Promise<void> {
+    if (memoryEvaluationLoading.value) return;
+    memoryEvaluationLoading.value = true;
+    try {
+      memoryEvaluation.value = await api.getMemoryEvaluation();
+      memoryEvaluationError.value = null;
+    } catch (error) {
+      memoryEvaluationError.value =
+        error instanceof Error
+          ? error.message
+          : "Memory 평가 조회에 실패했습니다.";
+    } finally {
+      memoryEvaluationLoading.value = false;
+    }
+  }
+
+  async function refreshMemory(): Promise<void> {
+    await Promise.all([refreshMemoryMetadata(), refreshMemoryEvaluation()]);
   }
 
   return {
@@ -702,6 +726,9 @@ export const useOperationsStore = defineStore("operations", () => {
     usageLoading,
     memory,
     memoryError,
+    memoryEvaluation,
+    memoryEvaluationError,
+    memoryEvaluationLoading,
     logConnection,
     logError,
     followingLogs,

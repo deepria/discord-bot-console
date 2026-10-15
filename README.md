@@ -143,3 +143,15 @@ outcome is known. The page shows last sent state, connection/freshness, pending 
 uncertain outcomes, and content-free change history. Failed polling retains the last
 snapshot and disables writes. Bot and Agent Presence support must be deployed before
 the Console; rebuilding the existing Docker image includes the frontend changes.
+
+## Memory evaluation screening
+
+The public Memory Index panel shows active/total lifecycle counts, active-item source
+linkage, elapsed observation days, check time, and reasons more evidence is needed.
+`GET /api/memory/evaluation` proxies the Agent's read-only Bot evaluation tool; deploy
+Bot evaluation support and the Agent route before the Console. Thresholds come from
+the tool (50 active items / 7 days by default) and cannot be changed from this page.
+Failed refreshes retain prior counts with a stale warning; unavailable reports are
+not displayed as zero samples. No memory content or source/owner IDs are added by
+this endpoint. Metadata screening never enables retrieval or replaces quality,
+privacy, representative-sample, and cost evaluation.

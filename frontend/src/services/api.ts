@@ -21,6 +21,7 @@ import type {
   TracesResponse,
   UsageResponse,
   MemoryResponse,
+  MemoryEvaluationResponse,
 } from "../types/api";
 import {
   PRESENCE_STATUSES,
@@ -31,6 +32,7 @@ import {
   type PresenceConfiguration,
   type PresenceSnapshot,
 } from "../domain/presence";
+import { MEMORY_EVALUATION_REASONS } from "../domain/memoryEvaluation";
 
 export class ApiError extends Error {
   constructor(
@@ -643,6 +645,111 @@ async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
   }
 }
 
+function parseMemoryEvaluation(value: unknown): MemoryEvaluationResponse {
+  const invalid = () =>
+    new ApiError("Memory 평가 응답 형식이 올바르지 않습니다.");
+  if (
+    !isRecord(value) ||
+    !isRecord(value.source) ||
+    !isRecord(value.evaluation)
+  )
+    throw invalid();
+  const report = value.evaluation;
+  if (
+    !isRecord(report.items) ||
+    !isRecord(report.provenance) ||
+    !isRecord(report.observation) ||
+    !isRecord(report.readiness)
+  )
+    throw invalid();
+  const count = (input: unknown, minimum = 0): number => {
+    if (
+      typeof input !== "number" ||
+      !Number.isSafeInteger(input) ||
+      input < minimum
+    )
+      throw invalid();
+    return input;
+  };
+  const timestamp = (input: unknown): string => {
+    if (typeof input !== "string" || !Number.isFinite(Date.parse(input)))
+      throw invalid();
+    return input;
+  };
+  const optionalTime = (input: unknown) =>
+    input === null ? null : timestamp(input);
+  const items = {
+    total: count(report.items.total),
+    active: count(report.items.active),
+    superseded: count(report.items.superseded),
+    deleted: count(report.items.deleted),
+    other_status: count(report.items.other_status),
+  };
+  const provenance = {
+    active_message_linked: count(report.provenance.active_message_linked),
+    active_turn_linked: count(report.provenance.active_turn_linked),
+  };
+  const observation = {
+    first_item_at: optionalTime(report.observation.first_item_at),
+    last_item_at: optionalTime(report.observation.last_item_at),
+    elapsed_days: count(report.observation.elapsed_days),
+  };
+  const readiness = {
+    minimum_active_items: count(report.readiness.minimum_active_items, 1),
+    minimum_days: count(report.readiness.minimum_days, 1),
+    ready_for_metadata_review: report.readiness.ready_for_metadata_review,
+    reasons: report.readiness.reasons,
+  };
+  if (
+    !["HEALTHY", "UNAVAILABLE"].includes(String(report.source_status)) ||
+    !["HEALTHY", "STALE", "UNAVAILABLE"].includes(
+      String(value.source.status),
+    ) ||
+    typeof readiness.ready_for_metadata_review !== "boolean" ||
+    !Array.isArray(readiness.reasons) ||
+    !readiness.reasons.every(
+      (reason) =>
+        typeof reason === "string" &&
+        Object.hasOwn(MEMORY_EVALUATION_REASONS, reason),
+    ) ||
+    items.total !==
+      items.active + items.superseded + items.deleted + items.other_status ||
+    provenance.active_message_linked > items.active ||
+    provenance.active_turn_linked > items.active ||
+    (readiness.ready_for_metadata_review &&
+      (report.source_status !== "HEALTHY" ||
+        readiness.reasons.length > 0 ||
+        items.other_status > 0 ||
+        items.active < readiness.minimum_active_items ||
+        observation.elapsed_days < readiness.minimum_days ||
+        provenance.active_message_linked !== items.active ||
+        provenance.active_turn_linked !== items.active ||
+        observation.first_item_at === null ||
+        observation.last_item_at === null))
+  )
+    throw invalid();
+  return {
+    checked_at: timestamp(value.checked_at),
+    source: {
+      status: value.source
+        .status as MemoryEvaluationResponse["source"]["status"],
+      last_success_at: optionalTime(value.source.last_success_at),
+      error_code: nullableString(value.source.error_code),
+    },
+    evaluation: {
+      source_status: report.source_status as "HEALTHY" | "UNAVAILABLE",
+      items,
+      provenance,
+      observation,
+      readiness: {
+        ...readiness,
+        ready_for_metadata_review: readiness.ready_for_metadata_review,
+        reasons: readiness.reasons as string[],
+      },
+    },
+  };
+}
+
 export const api = {
   async getPresence(requestId?: string): Promise<PresenceSnapshot> {
     return parsePresence(
@@ -666,6 +773,9 @@ export const api = {
   },
   async getMemory(): Promise<MemoryResponse> {
     return (await requestJson("/api/memory?limit=50")) as MemoryResponse;
+  },
+  async getMemoryEvaluation(): Promise<MemoryEvaluationResponse> {
+    return parseMemoryEvaluation(await requestJson("/api/memory/evaluation"));
   },
   async getAuthStatus(): Promise<ConsoleAuthStatus> {
     return parseConsoleAuthStatus(await requestJson("/api/auth/me"));

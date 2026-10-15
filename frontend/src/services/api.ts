@@ -21,6 +21,7 @@ import type {
   TracesResponse,
   UsageResponse,
   MemoryResponse,
+  MemoryDetailResponse,
   MemoryEvaluationResponse,
 } from "../types/api";
 import {
@@ -241,8 +242,14 @@ function parseConsoleAuthStatus(value: unknown): ConsoleAuthStatus {
 }
 
 function nullableTimestamp(value: unknown): string | null {
-  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return null;
-  return value;
+  if (typeof value !== "string") return null;
+  // SQLite CURRENT_TIMESTAMP is UTC, even though its text has no timezone suffix.
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(
+    value,
+  )
+    ? value.replace(" ", "T") + "Z"
+    : value;
+  return Number.isNaN(Date.parse(normalized)) ? null : normalized;
 }
 
 function parseDeploymentCheck(
@@ -750,6 +757,93 @@ function parseMemoryEvaluation(value: unknown): MemoryEvaluationResponse {
   };
 }
 
+function parseMemoryDetail(value: unknown): MemoryDetailResponse {
+  const invalid = () => new ApiError("기억 상세 응답을 확인할 수 없습니다.");
+  if (!isRecord(value) || !isRecord(value.memory) || !isRecord(value.source))
+    throw invalid();
+  const item = value.memory;
+  const text = (input: unknown): string => {
+    if (typeof input !== "string" || !input.trim()) throw invalid();
+    return input;
+  };
+  if (
+    !Number.isSafeInteger(item.id) ||
+    (item.id as number) < 1 ||
+    !["HEALTHY", "STALE", "UNAVAILABLE"].includes(
+      String(value.source_status),
+    ) ||
+    !["HEALTHY", "STALE", "UNAVAILABLE"].includes(
+      String(value.source.status),
+    ) ||
+    typeof item.content !== "string" ||
+    !item.content.trim() ||
+    Array.from(item.content).length > 600 ||
+    typeof item.origin_public_at_capture !== "boolean" ||
+    typeof item.confidence !== "number" ||
+    !Number.isFinite(item.confidence) ||
+    item.confidence < 0 ||
+    item.confidence > 1 ||
+    item.usage_state !== "shadow_only" ||
+    !Array.isArray(item.sources) ||
+    item.sources.length > 8 ||
+    (item.superseded_by !== null &&
+      (!Number.isSafeInteger(item.superseded_by) ||
+        (item.superseded_by as number) < 1))
+  )
+    throw invalid();
+  const sources = item.sources.map((source: unknown) => {
+    if (
+      !isRecord(source) ||
+      (source.turn_id !== null && typeof source.turn_id !== "string")
+    )
+      throw invalid();
+    const messageId = text(source.message_id);
+    const guild = text(item.origin_realm).match(/^guild:(\d+)$/)?.[1];
+    const channel = text(item.origin_channel_id);
+    const expected =
+      guild && /^\d+$/.test(channel) && /^\d+$/.test(messageId)
+        ? `https://discord.com/channels/${guild}/${channel}/${messageId}`
+        : null;
+    if (
+      source.message_url !== null &&
+      (typeof source.message_url !== "string" ||
+        source.message_url !== expected)
+    )
+      throw invalid();
+    return {
+      message_id: messageId,
+      turn_id: nullableString(source.turn_id),
+      message_url: source.message_url as string | null,
+    };
+  });
+  return {
+    source_status: value.source_status as MemoryDetailResponse["source_status"],
+    source: {
+      status: value.source.status as MemoryDetailResponse["source_status"],
+      last_success_at: nullableTimestamp(value.source.last_success_at),
+      error_code: nullableString(value.source.error_code),
+    },
+    memory: {
+      id: item.id as number,
+      owner_id: text(item.owner_id),
+      owner_type: text(item.owner_type),
+      content: item.content,
+      kind: text(item.kind),
+      disclosure: text(item.disclosure),
+      confidence: item.confidence,
+      origin_realm: text(item.origin_realm),
+      origin_channel_id: text(item.origin_channel_id),
+      origin_public_at_capture: item.origin_public_at_capture,
+      status: text(item.status),
+      superseded_by: item.superseded_by as number | null,
+      created_at: nullableTimestamp(item.created_at),
+      updated_at: nullableTimestamp(item.updated_at),
+      usage_state: "shadow_only",
+      sources,
+    },
+  };
+}
+
 export const api = {
   async getPresence(requestId?: string): Promise<PresenceSnapshot> {
     return parsePresence(
@@ -772,7 +866,24 @@ export const api = {
     );
   },
   async getMemory(): Promise<MemoryResponse> {
-    return (await requestJson("/api/memory?limit=50")) as MemoryResponse;
+    const result = (await requestJson(
+      "/api/memory?limit=50",
+    )) as MemoryResponse;
+    return {
+      ...result,
+      memory: result.memory.map((item) => ({
+        ...item,
+        created_at: nullableTimestamp(item.created_at) ?? item.created_at,
+      })),
+    };
+  },
+  async getMemoryDetail(itemId: number): Promise<MemoryDetailResponse> {
+    const result = parseMemoryDetail(
+      await requestJson(`/api/memory/${itemId}?include_content=true`),
+    );
+    if (result.memory.id !== itemId)
+      throw new ApiError("요청한 기억과 상세 결과가 일치하지 않습니다.");
+    return result;
   },
   async getMemoryEvaluation(): Promise<MemoryEvaluationResponse> {
     return parseMemoryEvaluation(await requestJson("/api/memory/evaluation"));

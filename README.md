@@ -155,3 +155,18 @@ Failed refreshes retain prior counts with a stale warning; unavailable reports a
 not displayed as zero samples. No memory content or source/owner IDs are added by
 this endpoint. Metadata screening never enables retrieval or replaces quality,
 privacy, representative-sample, and cost evaluation.
+
+## Inspecting memory candidates
+
+Memory Index prioritizes the candidate list; collection statistics can be expanded
+separately. A Discord administrator can select **내용 보기** to inspect one candidate's
+text, owner/scope, lifecycle/replacement, extraction timestamps, and message/turn
+sources. Original conversations are not copied; guild-message links open Discord
+under the operator's own Discord permissions. Missing turn IDs are shown explicitly.
+Confidence is a model estimate, and all these candidates remain shadow-only.
+
+Public list/evaluation reads remain metadata-only. Content uses the existing signed
+administrator detail route with `include_content=true` and a content-free access
+audit. `RIO_CONSOLE_IDENTITY_SECRET` must match on Console and Agent. Detail content
+is held only in the mounted panel, cleared on close/logout, and never persisted in
+Pinia or browser storage. Deploy Agent content support before the Console.

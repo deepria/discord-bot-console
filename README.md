@@ -128,6 +128,16 @@ the unit files to `/etc/systemd/system/`, run `systemctl daemon-reload`, and
 enable the timer during an approved maintenance window. Do not install or invoke
 them from the Console container.
 
+The five-minute timer polls for updates. If the running container's revision matches
+`main`, it is running, and its HTTP health check passes, deployment skips image
+build and container recreation. Revision and HTTP/Agent readiness checks still
+refresh the deployment evidence. Missing, stopped, unhealthy, or outdated containers
+are rebuilt and recreated, including recovery when a previous attempt advanced Git
+but failed to deploy. An Agent connectivity failure alone fails verification without
+recreating an otherwise healthy Console. For intentional rebuilds after environment,
+Compose, or base-image changes without a new commit, run the host deployment script
+with `RIO_CONSOLE_FORCE_DEPLOY=1`; the scheduled timer does not set this override.
+
 ## Discord Presence
 
 Runtime Settings includes a Discord Presence section. An authenticated Discord admin

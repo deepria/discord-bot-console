@@ -77,13 +77,24 @@ git merge-base --is-ancestor HEAD origin/main
 git merge --ff-only origin/main
 TARGET_REVISION=$(git rev-parse HEAD)
 
-PHASE=build
-write_status running
-RIO_CONSOLE_GIT_REVISION="$TARGET_REVISION" docker compose -f "$COMPOSE_FILE" build --pull rio-console
+# Compare the running artifact, not only HEAD: a previous failed deployment
+# may already have advanced the checkout without replacing the container.
+RUNNING_REVISION=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$CONTAINER" 2>/dev/null || true)
+CONTAINER_RUNNING=$(docker inspect --format '{{.State.Running}}' "$CONTAINER" 2>/dev/null || true)
+if [[ "${RIO_CONSOLE_FORCE_DEPLOY:-0}" != "1" &&
+      "$RUNNING_REVISION" == "$TARGET_REVISION" &&
+      "$CONTAINER_RUNNING" == "true" ]] &&
+   docker exec "$CONTAINER" python -c 'import httpx; assert httpx.get("http://127.0.0.1:8000/healthz", timeout=10).status_code == 200'; then
+  echo "Console already runs the target revision and is healthy; skipping build and recreate"
+else
+  PHASE=build
+  write_status running
+  RIO_CONSOLE_GIT_REVISION="$TARGET_REVISION" docker compose -f "$COMPOSE_FILE" build --pull rio-console
 
-PHASE=recreate
-write_status running
-RIO_CONSOLE_GIT_REVISION="$TARGET_REVISION" docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate rio-console
+  PHASE=recreate
+  write_status running
+  RIO_CONSOLE_GIT_REVISION="$TARGET_REVISION" docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate rio-console
+fi
 
 PHASE=revision-attestation
 write_status running

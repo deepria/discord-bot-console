@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { presenceFixture } from "../fixtures/presence";
 import { memoryEvaluationFixture } from "../fixtures/memoryEvaluation";
+import { memoryDetailFixture } from "../fixtures/memoryDetail";
 import type { BotStatus, ConsoleActor } from "../../src/types/api";
 
 const healthy: BotStatus = {
@@ -591,4 +592,82 @@ test("public Memory panel shows screening progress after reload and retains stal
   await expect(panel).toContainText("38 / 50건");
   await expect(panel).toContainText("Memory 평가 연결 실패");
   expect(writes).toBe(0);
+});
+
+test("admin inspects a selected memory candidate and logout clears its content", async ({
+  page,
+}) => {
+  await mockConsole(page, healthy, { id: "42", role: "admin" });
+  const detail = memoryDetailFixture();
+  let reads = 0;
+  let loggedIn = true;
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        oauth_enabled: true,
+        actor: loggedIn ? { id: "42", role: "admin" } : null,
+      },
+    }),
+  );
+  await page.route("**/api/auth/logout", (route) => {
+    loggedIn = false;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.route("**/api/memory?**", (route) =>
+    route.fulfill({
+      json: {
+        source_status: "HEALTHY",
+        next_cursor: null,
+        memory: [
+          {
+            id: 1,
+            owner_id: "99",
+            kind: "preference",
+            disclosure: "owner_private",
+            confidence: 0.9,
+            created_at: "2026-10-01T12:00:00Z",
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/memory/evaluation", (route) =>
+    route.fulfill({ json: memoryEvaluationFixture() }),
+  );
+  await page.route("**/api/memory/1?**", (route) => {
+    reads++;
+    return route.fulfill({ json: detail });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
+  const open = page.getByRole("button", { name: "기억 후보 1 내용 보기" });
+  await expect(open).toBeEnabled();
+  expect(reads).toBe(0);
+  await expect(
+    page.getByText(detail.memory.content, { exact: true }),
+  ).toHaveCount(0);
+  await open.click();
+  await expect(
+    page.getByText(detail.memory.content, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("연결 누락", { exact: false })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Discord 원본 메시지 1 보기" }),
+  ).toHaveAttribute("href", "https://discord.com/channels/10/20/100");
+  await page.getByRole("button", { name: "내용 닫기", exact: true }).click();
+  await expect(
+    page.getByText(detail.memory.content, { exact: true }),
+  ).toHaveCount(0);
+  await open.click();
+  await expect(
+    page.getByText(detail.memory.content, { exact: true }),
+  ).toBeVisible();
+  const logout = page.getByRole("button", { name: "LOG OUT", exact: true });
+  await logout.focus();
+  await logout.press("Enter");
+  await expect(open).toBeDisabled();
+  await expect(
+    page.getByText(detail.memory.content, { exact: true }),
+  ).toHaveCount(0);
+  expect(reads).toBe(2);
 });

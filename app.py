@@ -479,13 +479,14 @@ async def memory_evaluation():
 
 
 @app.get("/api/memory/{item_id}")
-async def memory_detail(item_id: int, request: Request):
+async def memory_detail(item_id: int, request: Request, include_content: bool = False):
     actor = require_admin(request)
     secret = os.getenv("RIO_CONSOLE_IDENTITY_SECRET")
     if not secret: raise HTTPException(status_code=503, detail="Memory detail authorization is unavailable")
     timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     signature = hmac.new(secret.encode(), f"{actor['id']}.{timestamp}".encode(), "sha256").hexdigest()
-    return await agent_get(f"/memory/{item_id}", {"X-Rio-Actor-Id": actor["id"], "X-Rio-Actor-Timestamp": timestamp, "X-Rio-Actor-Signature": signature})
+    path = f"/memory/{item_id}" + ("?include_content=true" if include_content else "")
+    return await agent_get(path, {"X-Rio-Actor-Id": actor["id"], "X-Rio-Actor-Timestamp": timestamp, "X-Rio-Actor-Signature": signature})
 
 
 @app.get("/api/runtime-events")

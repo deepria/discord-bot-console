@@ -109,6 +109,28 @@ export interface MemoryResponse {
   next_cursor: number | null;
 }
 
+export interface MemoryDetailResponse {
+  source_status: SourceStatus;
+  source: TracesResponse["source"];
+  memory: Omit<MemoryItem, "created_at"> & {
+    content: string;
+    owner_type: string;
+    origin_realm: string;
+    origin_channel_id: string;
+    origin_public_at_capture: boolean;
+    status: string;
+    superseded_by: number | null;
+    created_at: string | null;
+    updated_at: string | null;
+    usage_state: "shadow_only";
+    sources: {
+      message_id: string;
+      turn_id: string | null;
+      message_url: string | null;
+    }[];
+  };
+}
+
 export interface MemoryEvaluationResponse {
   checked_at: string;
   source: TracesResponse["source"];

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { recentTurnErrors } from "../../domain/recentErrors";
 import { storeToRefs } from "pinia";
 import { useOperationsStore } from "../../stores/operations";
@@ -8,7 +8,19 @@ import TelemetryValue from "../common/TelemetryValue.vue";
 import StatusBadge from "../common/StatusBadge.vue";
 import { STATUS_LABELS, ACTIVITY_LABELS } from "../../domain/presence";
 
+import BotControlActions from "../command/BotControlActions.vue";
+defineProps<{ canManage?: boolean }>();
 const store = useOperationsStore();
+const refreshResult = ref("");
+async function retryStatus(): Promise<void> {
+  if (store.statusInFlight) return;
+  refreshResult.value = "";
+  await store.refreshStatus();
+  refreshResult.value =
+    store.statusError || store.status?.events_error
+      ? "일부 상태를 조회하지 못했습니다. 오류 안내를 확인해 주세요."
+      : "최신 상태를 다시 조회했습니다.";
+}
 const { status, stale, statusError, lastStatusAt } = storeToRefs(store);
 const { presence, presenceError } = storeToRefs(store);
 
@@ -60,6 +72,28 @@ function runtimeSeverity(): "normal" | "attention" {
         :severity="!status || stale || !status.online ? 'alert' : 'normal'"
       />
       <p>LAST VERIFIED / {{ formatKst(lastStatusAt) }}</p>
+    </section>
+    <section class="unified-status-card" aria-label="상태 조회 및 복구">
+      <header>
+        <span>STATUS / RECOVERY</span>
+        <button
+          type="button"
+          class="control-button"
+          :disabled="store.statusInFlight"
+          @click="retryStatus"
+        >
+          {{ store.statusInFlight ? "상태 조회 중…" : "상태 다시 조회" }}
+        </button>
+      </header>
+      <p v-if="refreshResult" role="status" class="panel-footnote">
+        {{ refreshResult }}
+      </p>
+      <p class="panel-footnote">
+        상태 조회는 정보를 다시 읽습니다. Bot 재시작 중에는 Discord 응답이 잠시
+        중단됩니다. 실행 후 봇 서비스 상태를 확인하며, Discord 연결 복구는
+        별도로 확인해 주세요.
+      </p>
+      <BotControlActions :can-manage="canManage" :actions="['restart']" />
     </section>
     <section class="unified-status-grid" aria-label="통합 서비스 상태">
       <article class="unified-status-card">

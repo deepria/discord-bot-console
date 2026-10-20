@@ -1,3 +1,4 @@
+import { flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../src/services/api";
@@ -169,5 +170,68 @@ describe("operations store", () => {
     ]);
     expect(api.getStatus).toHaveBeenCalledTimes(2);
     expect(api.getLogs).toHaveBeenCalledTimes(1);
+  });
+  it("keeps controls pending through a fresh post-command read after an older poll", async () => {
+    let releaseOld!: (value: BotStatus) => void;
+    let releaseNew!: (value: BotStatus) => void;
+    vi.mocked(api.getStatus)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseOld = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseNew = resolve;
+          }),
+      );
+    vi.mocked(api.control).mockResolvedValue({ ok: true });
+    const store = useOperationsStore();
+    const poll = store.refreshStatus();
+    await flushPromises();
+    const command = store.runControl("restart");
+    await flushPromises();
+    expect(store.control.state).toBe("requesting");
+    expect(await store.runControl("restart")).toBe(false);
+    expect(api.control).toHaveBeenCalledTimes(1);
+    releaseOld({ ...healthyStatus, online: false });
+    await poll;
+    await flushPromises();
+    expect(api.getStatus).toHaveBeenCalledTimes(2);
+    expect(store.control.state).toBe("requesting");
+    releaseNew(healthyStatus);
+    await command;
+    expect(store.controlPostCheck).toBe("healthy");
+    expect(store.control.state).toBe("success");
+  });
+
+  it("does not pass post-check using stale online state after a failed status read", async () => {
+    vi.mocked(api.control).mockResolvedValue({ ok: true });
+    vi.mocked(api.getStatus).mockRejectedValue(
+      new Error("Agent status unavailable"),
+    );
+    const store = useOperationsStore();
+    store.status = healthyStatus;
+    await store.runControl("restart");
+    expect(store.status?.online).toBe(true);
+    expect(store.stale).toBe(true);
+    expect(store.control.state).toBe("success");
+    expect(store.controlPostCheck).toBe("failed");
+  });
+
+  it("reports an API denial without issuing a successful post-check", async () => {
+    vi.mocked(api.control).mockRejectedValue(
+      new Error("Discord administrator access required"),
+    );
+    const store = useOperationsStore();
+    await store.runControl("restart");
+    expect(store.control.state).toBe("failure");
+    expect(store.control.message).toContain(
+      "Discord administrator access required",
+    );
+    expect(store.controlPostCheck).toBe("failed");
+    expect(api.getStatus).not.toHaveBeenCalled();
   });
 });

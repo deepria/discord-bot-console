@@ -77,7 +77,9 @@ describe("recent response failures", () => {
   });
   it("distinguishes unavailable, checked-empty and stale windows and opens events", async () => {
     const store = useOperationsStore();
-    const wrapper = mount(SystemPanel);
+    const wrapper = mount(SystemPanel, {
+      global: { stubs: { ConfirmDialog: true } },
+    });
     const section = () => wrapper.get('[aria-label="최근 응답 오류"]');
     expect(section().text()).toContain("오류 이벤트를 확인할 수 없습니다");
     expect(section().text()).not.toContain("응답 오류가 없습니다");

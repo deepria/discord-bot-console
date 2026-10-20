@@ -29,6 +29,15 @@ The production container builds the frontend in a Node stage and copies only `fr
   conversation bodies or provider error messages. Unavailable/stale events
   are distinguished from a successfully checked window with no failures;
   historical failures do not change the current connection-health summary.
+- **Status / Recovery** in Operations Status retries the existing status read
+  for all visitors and exposes the existing service restart to Discord admins
+  after confirmation. Rio Control uses the same controls and permission state.
+  The shared pending state stays locked through post-checks, including when
+  switching panels. Post-checks require a fresh successful status read after
+  the command; cached ONLINE is not accepted after a read failure. This checks
+  service state, not Discord gateway readiness. Status retry does not execute
+  a synchronization job or reconnect Discord. The current architecture has no
+  separate synchronization/reconnect command, so those actions are not offered.
 - Select Rio to open the game-style dialogue window. Repeatedly select Rio or
   the dialogue body to advance through the portrait expressions and messages.
 - The official in-game portrait sources and redistribution note are documented

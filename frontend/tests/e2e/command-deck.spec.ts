@@ -431,11 +431,14 @@ test("guides an offline bot investigation from the action card", async ({
 });
 
 test("requires confirmation before stopping the bot", async ({ page }) => {
-  await mockConsole(page);
+  await mockConsole(page, healthy, {
+    id: "test-admin",
+    role: "admin",
+  });
   await page.goto("/");
   await switchToOfficeMode(page);
 
-  await selectFromControlPanel(page, /RIO CONTROL: AUTHORIZED/);
+  await selectFromControlPanel(page, /RIO CONTROL:/);
   await page.getByRole("button", { name: /STOP/ }).click();
 
   const dialog = page.getByRole("dialog", { name: "Rio Bot을 중지할까요?" });
@@ -790,4 +793,113 @@ test("shows five distinct recent failures and opens Live Events", async ({
   await expect(
     page.getByRole("heading", { name: "LIVE EVENTS" }),
   ).toBeVisible();
+});
+
+test("public recovery retries status reads and keeps service controls disabled", async ({
+  page,
+}) => {
+  await mockConsole(page);
+  let reads = 0;
+  let writes = 0;
+  await page.route("**/api/status", (route) => {
+    reads++;
+    return reads === 2
+      ? route.fulfill({
+          status: 503,
+          json: { detail: "Agent status unavailable" },
+        })
+      : route.fulfill({ json: healthy });
+  });
+  page.on("request", (request) => {
+    if (request.method() === "POST") writes++;
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /OPERATIONS STATUS: ONLINE/ }).click();
+  const recovery = page.getByRole("region", { name: "상태 조회 및 복구" });
+  await expect(
+    recovery.getByRole("button", { name: /RESTART/ }),
+  ).toBeDisabled();
+  await recovery
+    .getByRole("button", { name: "상태 다시 조회", exact: true })
+    .click();
+  await expect(recovery.getByRole("status")).toContainText(
+    "일부 상태를 조회하지 못했습니다",
+  );
+  await expect(
+    page.getByText("Agent status unavailable", { exact: true }).first(),
+  ).toBeVisible();
+  await recovery
+    .getByRole("button", { name: "상태 다시 조회", exact: true })
+    .click();
+  await expect(recovery.getByRole("status")).toContainText(
+    "최신 상태를 다시 조회했습니다",
+  );
+  expect(writes).toBe(0);
+  await page.getByRole("button", { name: "상세 패널 닫기" }).click();
+  await page.getByRole("button", { name: /RIO CONTROL:/ }).click();
+  for (const label of [/^START/, /^RESTART/, /^STOP/]) {
+    await expect(
+      page
+        .getByRole("complementary", { name: "RIO CONTROL", exact: true })
+        .getByRole("button", { name: label }),
+    ).toBeDisabled();
+  }
+});
+
+test("admin confirms recovery restart and pending state survives panel changes", async ({
+  page,
+}, testInfo) => {
+  await mockConsole(page, healthy, { id: "42", role: "admin" });
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let writes = 0;
+  await page.route("**/api/bot/restart", async (route) => {
+    writes++;
+    await gate;
+    await route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /OPERATIONS STATUS: ONLINE/ }).click();
+  const recovery = page.getByRole("region", { name: "상태 조회 및 복구" });
+  await recovery.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: testInfo.outputPath("recovery-overview.png"),
+    animations: "disabled",
+    fullPage: true,
+  });
+  await recovery.getByRole("button", { name: /RESTART/ }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Rio Bot을 재시작할까요?" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "취소", exact: true }).click();
+  expect(writes).toBe(0);
+  await recovery.getByRole("button", { name: /RESTART/ }).click();
+  await page.getByRole("button", { name: "재시작 실행", exact: true }).click();
+  await expect(
+    recovery.getByRole("button", { name: /RESTART/ }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "상세 패널 닫기" }).click();
+  await page.getByRole("button", { name: /RIO CONTROL:/ }).click();
+  const controlPanel = page.getByRole("complementary", {
+    name: "RIO CONTROL",
+    exact: true,
+  });
+  await expect(
+    controlPanel.getByRole("button", { name: /RESTART/ }),
+  ).toBeDisabled();
+  release();
+  await expect(
+    controlPanel.getByText(/SUCCESS \/ 재시작 요청을 완료했어/),
+  ).toBeVisible();
+  await expect(
+    controlPanel.getByText("post-check 통과", { exact: true }),
+  ).toBeVisible();
+  expect(writes).toBe(1);
+  await page.screenshot({
+    path: testInfo.outputPath("recovery-control.png"),
+    animations: "disabled",
+    fullPage: true,
+  });
 });

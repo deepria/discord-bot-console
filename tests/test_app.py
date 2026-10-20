@@ -270,3 +270,18 @@ def test_local_deployment_status_rejects_unattested_success(monkeypatch, tmp_pat
 
     assert result["status"] == "unknown"
     assert "do not match" in result["error"]
+
+
+def test_service_controls_reject_viewers_before_contacting_agent(monkeypatch):
+    calls = []
+
+    async def fake_agent_post(path, payload):
+        calls.append(path)
+        return {"ok": True}
+
+    monkeypatch.setattr(app_module, "agent_post", fake_agent_post)
+    monkeypatch.setattr(app_module, "session_actor", lambda request: {"id": "123", "role": "viewer"})
+    for action in ("start", "stop", "restart"):
+        response = client.post(f"/api/bot/{action}")
+        assert response.status_code == 403
+    assert calls == []

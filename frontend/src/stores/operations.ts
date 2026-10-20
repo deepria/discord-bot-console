@@ -158,6 +158,7 @@ export const useOperationsStore = defineStore("operations", () => {
   const stale = ref(false);
   const lastStatusAt = ref<Date | null>(null);
   const statusInFlight = ref(false);
+  let statusRequest: Promise<void> | null = null;
 
   const deployments = ref<DeploymentsResponse | null>(null);
   const deploymentsError = ref<string | null>(null);
@@ -383,7 +384,7 @@ export const useOperationsStore = defineStore("operations", () => {
         id: "control",
         label: "RIO CONTROL",
         severity: control.value.state === "failure" ? "alert" : "normal",
-        summary: control.value.state === "requesting" ? "BUSY" : "AUTHORIZED",
+        summary: control.value.state === "requesting" ? "BUSY" : "IDLE",
       },
     };
   });
@@ -408,23 +409,29 @@ export const useOperationsStore = defineStore("operations", () => {
     eventsInitialized = true;
   }
 
-  async function refreshStatus(): Promise<void> {
-    if (statusInFlight.value) return;
+  function refreshStatus(): Promise<void> {
+    if (statusRequest) return statusRequest;
     statusInFlight.value = true;
-    try {
-      const next = await api.getStatus();
-      ingestEvents(next.events);
-      status.value = next;
-      stale.value = false;
-      statusError.value = null;
-      lastStatusAt.value = new Date();
-    } catch (error) {
-      statusError.value =
-        error instanceof Error ? error.message : "Status request failed.";
-      stale.value = Boolean(status.value);
-    } finally {
-      statusInFlight.value = false;
-    }
+    statusRequest = Promise.resolve()
+      .then(async () => {
+        try {
+          const next = await api.getStatus();
+          ingestEvents(next.events);
+          status.value = next;
+          stale.value = false;
+          statusError.value = null;
+          lastStatusAt.value = new Date();
+        } catch (error) {
+          statusError.value =
+            error instanceof Error ? error.message : "Status request failed.";
+          stale.value = Boolean(status.value);
+        }
+      })
+      .finally(() => {
+        statusInFlight.value = false;
+        statusRequest = null;
+      });
+    return statusRequest;
   }
 
   async function refreshDeployments(): Promise<void> {
@@ -577,6 +584,21 @@ export const useOperationsStore = defineStore("operations", () => {
     controlPostCheck.value = "pending";
     try {
       await api.control(action);
+      // Wait for any pre-command poll before starting the post-command read.
+      if (statusRequest) await statusRequest;
+      await Promise.all([
+        refreshStatus(),
+        refreshDeployments(),
+        refreshLogs(),
+        refreshOperations(),
+      ]);
+      const postCheckHealthy =
+        !statusError.value &&
+        !stale.value &&
+        (action === "stop"
+          ? status.value?.online === false
+          : status.value?.online === true);
+      controlPostCheck.value = postCheckHealthy ? "healthy" : "failed";
       control.value = {
         action,
         state: "success",
@@ -585,17 +607,6 @@ export const useOperationsStore = defineStore("operations", () => {
             ? "봇 중지 요청을 완료했어."
             : `${action === "start" ? "시작" : "재시작"} 요청을 완료했어.`,
       };
-      await Promise.all([
-        refreshStatus(),
-        refreshDeployments(),
-        refreshLogs(),
-        refreshOperations(),
-      ]);
-      const postCheckHealthy =
-        action === "stop"
-          ? status.value?.online === false
-          : status.value?.online === true;
-      controlPostCheck.value = postCheckHealthy ? "healthy" : "failed";
       const successfulOperation: OperationRecord = {
         id: crypto.randomUUID(),
         kind: action,
@@ -739,6 +750,7 @@ export const useOperationsStore = defineStore("operations", () => {
     writePresence,
     status,
     statusError,
+    statusInFlight,
     stale,
     lastStatusAt,
     deployments,

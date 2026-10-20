@@ -671,3 +671,79 @@ test("admin inspects a selected memory candidate and logout clears its content",
   ).toHaveCount(0);
   expect(reads).toBe(2);
 });
+
+test("memory owner selection separates users and clears the previous body", async ({
+  page,
+}, info) => {
+  await mockConsole(page, healthy, { id: "910000000000000099", role: "admin" });
+  const rows = [
+    {
+      id: 1,
+      owner_id: "910000000000000099",
+      kind: "preference",
+      disclosure: "owner_private",
+      confidence: 0.9,
+      created_at: "2026-10-01T12:00:00Z",
+    },
+    {
+      id: 2,
+      owner_id: "910000000000000088",
+      kind: "fact",
+      disclosure: "owner_private",
+      confidence: 0.8,
+      created_at: "2026-10-01T11:00:00Z",
+    },
+  ];
+  await page.route("**/api/memory?**", (route) => {
+    const owner = new URL(route.request().url()).searchParams.get("owner_id");
+    return route.fulfill({
+      json: {
+        source_status: "HEALTHY",
+        next_cursor: null,
+        memory: owner ? rows.filter((row) => row.owner_id === owner) : rows,
+      },
+    });
+  });
+  await page.route("**/api/memory/evaluation", (route) =>
+    route.fulfill({ json: memoryEvaluationFixture() }),
+  );
+  const detail = memoryDetailFixture();
+  detail.memory.owner_id = "910000000000000099";
+  await page.route("**/api/memory/1?**", (route) =>
+    route.fulfill({ json: detail }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
+  const selector = page.getByRole("combobox", { name: "기억 소유자" });
+  await expect(selector).toBeVisible();
+  await expect(
+    page.locator("dd").filter({ hasText: "내 기억 · ID 910000000000000099" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("dd")
+      .filter({ hasText: "사용자 기억 · ID 910000000000000088" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "기억 후보 1 내용 보기" }).click();
+  await expect(
+    page.getByText("간결한 답변을 선호한다.", { exact: true }),
+  ).toBeVisible();
+  await selector.selectOption("910000000000000088");
+  await expect(
+    page.getByText("간결한 답변을 선호한다.", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "기억 후보 1 내용 보기" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "기억 후보 2 내용 보기" }),
+  ).toBeVisible();
+  await page.locator("#monitor-panel .panel-content").evaluate((el) => {
+    el.scrollTop = 0;
+  });
+  await page.screenshot({
+    animations: "disabled",
+    path: info.outputPath("memory-owner.png"),
+    fullPage: true,
+  });
+});

@@ -466,9 +466,12 @@ async def usage_analytics(
 
 
 @app.get("/api/memory")
-async def memory_metadata(limit: int = 50, scope: Literal["channel", "owner_private"] | None = None, cursor: int | None = None):
+async def memory_metadata(limit: int = 50, scope: Literal["channel", "owner_private"] | None = None,
+                          cursor: int | None = None,
+                          owner_id: str | None = Query(default=None, pattern=r"^[0-9]{1,30}$")):
     query = {"limit": str(max(1, min(limit, 100)))}
     if scope: query["scope"] = scope
+    if owner_id is not None: query["owner_id"] = owner_id
     if cursor: query["cursor"] = str(cursor)
     return await agent_get(f"/memory?{urlencode(query)}")
 

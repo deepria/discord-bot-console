@@ -874,10 +874,21 @@ export const api = {
       }),
     );
   },
-  async getMemory(): Promise<MemoryResponse> {
+  async getMemory(ownerId?: string, cursor?: number): Promise<MemoryResponse> {
+    const query = new URLSearchParams({ limit: "50" });
+    if (ownerId) {
+      if (!/^[0-9]{1,30}$/.test(ownerId))
+        throw new ApiError("사용자 ID가 올바르지 않습니다.");
+      query.set("owner_id", ownerId);
+    }
+    if (cursor) query.set("cursor", String(cursor));
     const result = (await requestJson(
-      "/api/memory?limit=50",
+      `/api/memory?${query}`,
     )) as MemoryResponse;
+    if (ownerId && result.memory.some((item) => item.owner_id !== ownerId))
+      throw new ApiError(
+        "선택한 사용자와 기억 목록이 일치하지 않습니다. 다시 조회해 주세요.",
+      );
     return {
       ...result,
       memory: result.memory.map((item) => ({

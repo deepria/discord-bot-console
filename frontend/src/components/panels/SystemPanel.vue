@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from "vue";
+import { recentTurnErrors } from "../../domain/recentErrors";
 import { storeToRefs } from "pinia";
 import { useOperationsStore } from "../../stores/operations";
 import { formatKst, formatUptime } from "../../utils/format";
@@ -9,6 +11,13 @@ import { STATUS_LABELS, ACTIVITY_LABELS } from "../../domain/presence";
 const store = useOperationsStore();
 const { status, stale, statusError, lastStatusAt } = storeToRefs(store);
 const { presence, presenceError } = storeToRefs(store);
+
+const recentErrors = computed(() =>
+  recentTurnErrors(status.value?.events ?? []),
+);
+const errorsUnavailable = computed(
+  () => !status.value || Boolean(status.value.events_error),
+);
 
 function linkSeverity(): "normal" | "alert" {
   return statusError.value || stale.value ? "alert" : "normal";
@@ -137,6 +146,45 @@ function runtimeSeverity(): "normal" | "attention" {
           </div>
         </dl>
       </article>
+    </section>
+    <section
+      class="unified-status-card recent-errors"
+      aria-label="최근 응답 오류"
+    >
+      <header>
+        <span>RECENT ERRORS / {{ recentErrors.length }}</span>
+        <button
+          type="button"
+          class="control-button"
+          @click="store.selectMonitor('events')"
+        >
+          Live Events 보기
+        </button>
+      </header>
+      <p class="panel-footnote">
+        최근 수신 이벤트 {{ status?.events.length ?? 0 }}건 중 응답 실패 최대
+        5건입니다. 전체 오류 이력이나 현재 장애 여부를 뜻하지 않습니다.
+      </p>
+      <p v-if="errorsUnavailable" class="inline-alert">
+        오류 이벤트를 확인할 수 없습니다. {{ status?.events_error }}
+      </p>
+      <p v-else-if="stale || statusError" class="inline-alert">
+        최신 오류 여부를 확인할 수 없습니다. 마지막 수신 결과를 표시합니다.
+      </p>
+      <ol v-if="recentErrors.length" class="recent-error-list">
+        <li v-for="(error, index) in recentErrors" :key="index">
+          <time :datetime="error.at ?? undefined">{{
+            error.at ? formatKst(error.at) : "시각 미상"
+          }}</time>
+          <strong>{{ error.diagnosis }}</strong>
+        </li>
+      </ol>
+      <p
+        v-else-if="!errorsUnavailable && !stale && !statusError"
+        class="panel-footnote"
+      >
+        최근 수신 범위에 응답 오류가 없습니다.
+      </p>
     </section>
     <section class="unified-flow" aria-label="서비스 연동 흐름">
       <span>DATA LINK</span><i aria-hidden="true">→</i><span>AI PROCESSING</span

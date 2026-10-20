@@ -173,6 +173,7 @@ async function closePanel(): Promise<void> {
             :key="selectedMonitor"
             inline
             :can-read-memory-content="authActor?.role === 'admin'"
+            :current-actor-id="authActor?.id"
             @close="closePanel"
           />
         </Transition>
@@ -183,6 +184,7 @@ async function closePanel(): Promise<void> {
         v-if="selectedMonitor && mode === 'console'"
         :key="selectedMonitor"
         :can-read-memory-content="authActor?.role === 'admin'"
+        :current-actor-id="authActor?.id"
         @close="closePanel"
       />
     </Transition>

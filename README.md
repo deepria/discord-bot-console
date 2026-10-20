@@ -180,3 +180,18 @@ administrator detail route with `include_content=true` and a content-free access
 audit. `RIO_CONSOLE_IDENTITY_SECRET` must match on Console and Agent. Detail content
 is held only in the mounted panel, cleared on close/logout, and never persisted in
 Pinia or browser storage. Deploy Agent content support before the Console.
+
+
+## Memory ownership inspection
+
+Memory Index labels every candidate with its owner ID and marks the logged-in actor's entries
+as their own. The owner selector filters metadata server-side; its options come from loaded pages
+(and the signed-in actor). Next-page loading retains that filter. Names are not inferred from
+candidate text and no new Discord profile information is made public. Numeric IDs remain the
+fallback until a verified profile source is introduced.
+
+Owner changes close and clear the previous body and ignore late metadata/detail responses.
+Source health and global collection statistics are separate from content quality and are not
+changed by the owner filter. Existing public metadata and admin-only, audited, no-store body
+access policies remain in place. `owner_private` means private to that candidate's owner, not
+necessarily the administrator currently inspecting it. Deploy Agent owner_id support first.

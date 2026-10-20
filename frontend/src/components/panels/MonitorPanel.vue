@@ -12,7 +12,11 @@ import TracePanel from "./TracePanel.vue";
 import UsagePanel from "./UsagePanel.vue";
 import MemoryPanel from "./MemoryPanel.vue";
 
-defineProps<{ inline?: boolean; canReadMemoryContent?: boolean }>();
+defineProps<{
+  inline?: boolean;
+  canReadMemoryContent?: boolean;
+  currentActorId?: string;
+}>();
 const emit = defineEmits<{ close: [] }>();
 const store = useOperationsStore();
 const { selectedMonitor, monitorStatuses } = storeToRefs(store);
@@ -81,7 +85,7 @@ onMounted(() => panel.value?.focus({ preventScroll: true }));
       :is="currentComponent"
       v-bind="
         selectedMonitor === 'memory'
-          ? { canReadContent: canReadMemoryContent }
+          ? { canReadContent: canReadMemoryContent, currentActorId }
           : {}
       "
     />

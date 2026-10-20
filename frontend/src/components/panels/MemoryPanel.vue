@@ -11,7 +11,10 @@ import {
 import { api } from "../../services/api";
 import type { MemoryDetailResponse } from "../../types/api";
 import MemoryItemDetail from "./MemoryItemDetail.vue";
-const props = defineProps<{ canReadContent?: boolean }>();
+const props = defineProps<{
+  canReadContent?: boolean;
+  currentActorId?: string;
+}>();
 const selectedId = ref<number | null>(null);
 const detail = ref<MemoryDetailResponse | null>(null);
 const detailError = ref<string | null>(null);
@@ -55,10 +58,47 @@ const store = useOperationsStore();
 const {
   memory,
   memoryError,
+  memoryOwnerFilter,
+  memoryLoading,
   memoryEvaluation,
   memoryEvaluationError,
   memoryEvaluationLoading,
 } = storeToRefs(store);
+const knownOwners = ref<string[]>([]);
+watch(
+  () => memory.value?.memory,
+  (rows) => {
+    knownOwners.value = [
+      ...new Set([
+        ...knownOwners.value,
+        ...(rows ?? []).map((row) => row.owner_id),
+      ]),
+    ];
+  },
+  { immediate: true },
+);
+const ownerOptions = computed(() => [
+  ...new Set([
+    ...(props.currentActorId ? [props.currentActorId] : []),
+    ...knownOwners.value,
+  ]),
+]);
+function ownerLabel(id: string): string {
+  return `${id === props.currentActorId ? "내 기억" : "사용자 기억"} · ID ${id}`;
+}
+function changeOwner(event: Event): void {
+  closeDetail();
+  void store.setMemoryOwnerFilter((event.target as HTMLSelectElement).value);
+}
+watch(memoryOwnerFilter, closeDetail);
+watch(
+  () => props.currentActorId,
+  () => {
+    closeDetail();
+    // A previous administrator's personal selection must not become the next actor's default.
+    if (memoryOwnerFilter.value) void store.setMemoryOwnerFilter("");
+  },
+);
 const report = computed(() => memoryEvaluation.value?.evaluation);
 const sourceUnavailable = computed(
   () =>
@@ -87,7 +127,29 @@ onMounted(() => void store.refreshMemory());
   <div class="panel-content stack">
     <p class="panel-footnote">
       대화에서 추출한 기억 후보입니다. 현재 답변에는 사용하지 않으며, 내용과
-      출처를 검토하는 단계입니다.
+      출처를 검토하는 단계입니다. HEALTHY는 조회 상태이며 내용 품질 합격을
+      뜻하지 않습니다.
+    </p>
+    <label class="stack">
+      기억 소유자
+      <select
+        :value="memoryOwnerFilter"
+        aria-label="기억 소유자"
+        @change="changeOwner"
+      >
+        <option value="">모든 사용자</option>
+        <option v-for="owner in ownerOptions" :key="owner" :value="owner">
+          {{ ownerLabel(owner) }}
+        </option>
+      </select>
+    </label>
+    <p class="panel-footnote">
+      개인 범위는 각 소유자의 기억입니다. 관리자 본인의 기억만을 뜻하지
+      않습니다. 소유자 목록은 조회된 항목 기준입니다.
+    </p>
+    <p class="panel-footnote">
+      아래 수집·평가 통계는 소유자 필터와 관계없이 전체 사용자를 기준으로
+      합니다.
     </p>
     <details
       :open="!memory?.memory.length"
@@ -191,6 +253,10 @@ onMounted(() => void store.refreshMemory());
         </header>
         <dl class="data-list compact">
           <div>
+            <dt>소유자</dt>
+            <dd>{{ ownerLabel(item.owner_id) }}</dd>
+          </div>
+          <div>
             <dt>ID</dt>
             <dd>{{ item.id }}</dd>
           </div>
@@ -236,11 +302,30 @@ onMounted(() => void store.refreshMemory());
           <p v-if="detailLoading" class="empty-state">
             기억 후보 내용을 조회하고 있습니다.
           </p>
-          <MemoryItemDetail v-if="detail" :detail="detail" />
+          <MemoryItemDetail
+            v-if="detail"
+            :detail="detail"
+            :owner-label="ownerLabel(detail.memory.owner_id)"
+          />
         </template>
       </li>
     </ol>
-    <p v-else class="empty-state">표시할 memory metadata가 없습니다.</p>
+    <p v-else class="empty-state">
+      {{
+        memoryLoading
+          ? "기억 목록 조회 중…"
+          : "이 범위에 표시할 기억 후보가 없습니다."
+      }}
+    </p>
+    <button
+      v-if="memory?.next_cursor"
+      type="button"
+      class="control-button"
+      :disabled="memoryLoading"
+      @click="store.loadMoreMemory()"
+    >
+      {{ memoryLoading ? "조회 중…" : "다음 후보 보기" }}
+    </button>
     <p v-if="!canReadContent" class="panel-footnote">
       후보 내용은 Discord 관리자 로그인 후 ‘내용 보기’로 열람할 수 있습니다.
       목록과 평가 집계는 로그인 없이 볼 수 있습니다.

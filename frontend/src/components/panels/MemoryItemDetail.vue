@@ -8,7 +8,10 @@ import {
   MEMORY_SCOPE_LABELS,
   MEMORY_OWNER_LABELS,
 } from "../../domain/memoryLabels";
-const props = defineProps<{ detail: MemoryDetailResponse }>();
+const props = defineProps<{
+  detail: MemoryDetailResponse;
+  ownerLabel?: string;
+}>();
 const item = computed(() => props.detail.memory);
 const ownerUrl = computed(() =>
   item.value.owner_type === "user" && /^\d+$/.test(item.value.owner_id)
@@ -28,6 +31,7 @@ const ownerUrl = computed(() =>
       출처 데이터가 오래됐거나 현재 상태를 확인할 수 없습니다. 아래는 조회된
       저장 항목입니다.
     </p>
+    <strong v-if="ownerLabel">{{ ownerLabel }}</strong>
     <p class="memory-candidate-content">{{ item.content }}</p>
     <dl class="data-list compact">
       <div>

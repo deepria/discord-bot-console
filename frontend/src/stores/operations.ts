@@ -182,6 +182,9 @@ export const useOperationsStore = defineStore("operations", () => {
   const usageLoading = ref(false);
   const memory = ref<MemoryResponse | null>(null);
   const memoryError = ref<string | null>(null);
+  const memoryOwnerFilter = ref("");
+  const memoryLoading = ref(false);
+  let memoryRevision = 0;
   const memoryEvaluation = ref<MemoryEvaluationResponse | null>(null);
   const memoryEvaluationError = ref<string | null>(null);
   const memoryEvaluationLoading = ref(false);
@@ -670,14 +673,40 @@ export const useOperationsStore = defineStore("operations", () => {
       usageLoading.value = false;
     }
   }
-  async function refreshMemoryMetadata(): Promise<void> {
+  async function refreshMemoryMetadata(cursor?: number): Promise<void> {
+    const revision = ++memoryRevision;
+    const owner = memoryOwnerFilter.value;
+    memoryLoading.value = true;
     try {
-      memory.value = await api.getMemory();
+      const response = await api.getMemory(owner || undefined, cursor);
+      if (revision !== memoryRevision) return;
+      memory.value =
+        cursor && memory.value
+          ? {
+              ...response,
+              memory: [...memory.value.memory, ...response.memory],
+            }
+          : response;
       memoryError.value = null;
     } catch (error) {
+      if (revision !== memoryRevision) return;
       memoryError.value =
         error instanceof Error ? error.message : "Memory request failed.";
+    } finally {
+      if (revision === memoryRevision) memoryLoading.value = false;
     }
+  }
+
+  async function setMemoryOwnerFilter(owner: string): Promise<void> {
+    memoryOwnerFilter.value = owner;
+    memory.value = null;
+    memoryError.value = null;
+    await refreshMemoryMetadata();
+  }
+
+  async function loadMoreMemory(): Promise<void> {
+    if (!memoryLoading.value && memory.value?.next_cursor)
+      await refreshMemoryMetadata(memory.value.next_cursor);
   }
 
   async function refreshMemoryEvaluation(): Promise<void> {
@@ -726,6 +755,8 @@ export const useOperationsStore = defineStore("operations", () => {
     usageLoading,
     memory,
     memoryError,
+    memoryOwnerFilter,
+    memoryLoading,
     memoryEvaluation,
     memoryEvaluationError,
     memoryEvaluationLoading,
@@ -767,6 +798,8 @@ export const useOperationsStore = defineStore("operations", () => {
     refreshTraces,
     refreshUsage,
     refreshMemory,
+    setMemoryOwnerFilter,
+    loadMoreMemory,
     selectMonitor,
     replaceLogs,
     appendLog,

@@ -130,19 +130,21 @@ onMounted(() => void store.refreshMemory());
       출처를 검토하는 단계입니다. HEALTHY는 조회 상태이며 내용 품질 합격을
       뜻하지 않습니다.
     </p>
-    <label class="stack">
-      기억 소유자
-      <select
-        :value="memoryOwnerFilter"
-        aria-label="기억 소유자"
-        @change="changeOwner"
-      >
-        <option value="">모든 사용자</option>
-        <option v-for="owner in ownerOptions" :key="owner" :value="owner">
-          {{ ownerLabel(owner) }}
-        </option>
-      </select>
-    </label>
+    <div class="usage-controls memory-owner-controls">
+      <label>
+        기억 소유자
+        <select
+          :value="memoryOwnerFilter"
+          aria-label="기억 소유자"
+          @change="changeOwner"
+        >
+          <option value="">모든 사용자</option>
+          <option v-for="owner in ownerOptions" :key="owner" :value="owner">
+            {{ ownerLabel(owner) }}
+          </option>
+        </select>
+      </label>
+    </div>
     <p class="panel-footnote">
       개인 범위는 각 소유자의 기억입니다. 관리자 본인의 기억만을 뜻하지
       않습니다. 소유자 목록은 조회된 항목 기준입니다.

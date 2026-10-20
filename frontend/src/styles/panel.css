@@ -972,3 +972,17 @@
     gap: 4px;
   }
 }
+
+.memory-owner-controls label {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+}
+.memory-owner-controls select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 40px;
+  margin-left: 0;
+}

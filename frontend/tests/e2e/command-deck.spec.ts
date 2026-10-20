@@ -747,3 +747,47 @@ test("memory owner selection separates users and clears the previous body", asyn
     fullPage: true,
   });
 });
+
+test("shows five distinct recent failures and opens Live Events", async ({
+  page,
+}, testInfo) => {
+  const failures = Array.from({ length: 6 }, (_, i) => ({
+    at: `2026-10-20T01:00:0${i}Z`,
+    event: "turn.failed",
+    turn_id: `turn-${i}`,
+    error_type: `Failure${i}`,
+    provider_error_message: "PRIVATE_PROVIDER_BODY",
+  }));
+  await mockConsole(page, {
+    ...healthy,
+    events: [
+      ...failures,
+      { ...failures[5], event: "turn_failed" },
+      {
+        at: "2026-10-20T01:00:07Z",
+        event: "structured_memory_shadow",
+        rejected: { policy: 1 },
+      },
+    ],
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /OPERATIONS STATUS: ONLINE/ }).click();
+  const errors = page.getByRole("region", { name: "최근 응답 오류" });
+  await errors.scrollIntoViewIfNeeded();
+  await expect(errors.locator("li")).toHaveCount(5);
+  await expect(errors.locator("li").first()).toContainText("Failure5");
+  await expect(errors.locator("li").last()).toContainText("Failure1");
+  await expect(errors).not.toContainText("PRIVATE_PROVIDER_BODY");
+  await expect(
+    page.getByText("ALL SYSTEMS NOMINAL", { exact: true }),
+  ).toHaveCount(1);
+  await page.screenshot({
+    path: testInfo.outputPath("recent-errors.png"),
+    animations: "disabled",
+    fullPage: true,
+  });
+  await errors.getByRole("button", { name: "Live Events 보기" }).click();
+  await expect(
+    page.getByRole("heading", { name: "LIVE EVENTS" }),
+  ).toBeVisible();
+});

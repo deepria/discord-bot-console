@@ -986,3 +986,30 @@
   min-height: 40px;
   margin-left: 0;
 }
+
+.recent-error-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-error-list li {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border-left: 2px solid var(--accent);
+  background: rgba(0, 0, 0, 0.18);
+  overflow-wrap: anywhere;
+}
+
+.recent-error-list time {
+  color: var(--muted);
+  font: 700 10px/1.5 var(--font-mono);
+}
+
+.recent-error-list strong {
+  color: var(--ink);
+  font: 700 12px/1.5 var(--font-mono);
+}

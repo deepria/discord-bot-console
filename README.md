@@ -23,6 +23,12 @@ The production container builds the frontend in a Node stage and copies only `fr
   one overview. It shows the current aggregate state, each area's key metrics,
   the data-flow path, and the last verified response. Use Live Events, Log
   Stream, and Rio Control for their respective detailed workflows.
+  Recent Errors shows up to five response failures from the latest received
+  event window, newest first. Legacy `turn_failed` and `turn.failed` events
+  with the same turn ID count once. It displays safe error metadata, not
+  conversation bodies or provider error messages. Unavailable/stale events
+  are distinguished from a successfully checked window with no failures;
+  historical failures do not change the current connection-health summary.
 - Select Rio to open the game-style dialogue window. Repeatedly select Rio or
   the dialogue body to advance through the portrait expressions and messages.
 - The official in-game portrait sources and redistribution note are documented

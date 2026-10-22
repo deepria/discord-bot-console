@@ -117,14 +117,21 @@ watch(
         <span>STOP</span><small>Requires confirmation</small>
       </button>
     </div>
-    <p
-      v-if="control.state !== 'idle'"
-      class="control-result"
-      :class="`is-${control.state}`"
+    <div
+      role="status"
+      aria-label="Bot 제어 결과"
+      aria-live="polite"
+      aria-atomic="true"
     >
-      {{ control.state.toUpperCase() }} /
-      {{ control.message || control.action.toUpperCase() }}
-    </p>
+      <p
+        v-if="control.state !== 'idle'"
+        class="control-result"
+        :class="`is-${control.state}`"
+      >
+        {{ control.state.toUpperCase() }} /
+        {{ control.message || control.action.toUpperCase() }}
+      </p>
+    </div>
     <CommandTimeline
       v-if="control.state !== 'idle'"
       :action="control.action"

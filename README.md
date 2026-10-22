@@ -43,6 +43,23 @@ The production container builds the frontend in a Node stage and copies only `fr
 - The official in-game portrait sources and redistribution note are documented
   in `frontend/src/assets/rio/SOURCES.md`.
 
+## Keyboard accessibility
+
+Panels and Settings receive focus when opened and return it to the launching
+control when closed; if submission disables that control, focus returns to its
+panel. The command palette keeps focus inside, makes the background
+inert, includes Memory Index, and passes focus to the selected panel. Confirmation
+dialogs use unique title/description IDs, focus Cancel first, and cycle Tab in both
+directions. Cmd/Ctrl+K does not open another overlay over an active confirmation.
+Service command results use a named live status region; inputs, links, selectors,
+and navigation keep visible focus indicators.
+
+Chromium and mobile WebKit tests cover these flows and reduced motion. The text
+color tokens are checked at 4.5:1 against fixed surfaces in normal/alert themes,
+using the [WCAG contrast formula](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum).
+This is a bounded browser check, not a complete WCAG certification or a substitute
+for testing actual screen-reader speech and every Office scene image/background.
+
 ## Local development
 
 Use Node.js 22.22+ (or 24.15+) and npm 11+ for the frontend toolchain.

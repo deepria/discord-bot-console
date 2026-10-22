@@ -161,6 +161,7 @@ onUnmounted(() => window.clearInterval(clockTimer));
           <button
             type="button"
             class="office-console-switch"
+            data-settings-trigger
             @click="$emit('settings')"
           >
             SETTINGS

@@ -22,6 +22,15 @@ const settingsOpen = ref(false);
 const authActor = ref<ConsoleActor | null>(null);
 const oauthEnabled = ref(false);
 let paletteTrigger: HTMLElement | null = null;
+let panelTrigger: HTMLElement | null = null;
+let settingsTrigger: HTMLElement | null = null;
+function activeTrigger(): HTMLElement | null {
+  const active = document.activeElement;
+  return active instanceof HTMLElement &&
+    !active.closest(".monitor-panel, .command-palette")
+    ? active
+    : null;
+}
 
 usePolling(() => store.refreshStatus(), 5000);
 usePolling(() => store.refreshPresence(), 5000);
@@ -37,6 +46,7 @@ function selectMonitor(id: MonitorId): void {
     void closePanel();
     return;
   }
+  panelTrigger = activeTrigger();
   office.value?.closeDialogue();
   store.selectMonitor(id);
 }
@@ -46,13 +56,19 @@ function dismissPanel(): void {
 }
 
 function openSettings(): void {
+  settingsTrigger = activeTrigger();
   office.value?.closeDialogue();
   store.selectMonitor(null);
   settingsOpen.value = true;
 }
 
-function closeSettings(): void {
+async function closeSettings(): Promise<void> {
   settingsOpen.value = false;
+  await nextTick();
+  const target = settingsTrigger?.isConnected
+    ? settingsTrigger
+    : document.querySelector<HTMLElement>("[data-settings-trigger]");
+  target?.focus({ preventScroll: true });
 }
 
 function selectLogs(): void {
@@ -67,12 +83,20 @@ function openPalette(): void {
   paletteOpen.value = true;
 }
 
-function closePalette(): void {
+function closePalette(restoreFocus = true): void {
   paletteOpen.value = false;
-  void nextTick(() => paletteTrigger?.focus());
+  if (restoreFocus)
+    void nextTick(() => {
+      const target =
+        paletteTrigger?.isConnected && !paletteTrigger.matches(":disabled")
+          ? paletteTrigger
+          : document.querySelector<HTMLElement>(".palette-trigger");
+      target?.focus({ preventScroll: true });
+    });
 }
 
 function onGlobalKeydown(event: KeyboardEvent): void {
+  if (event.defaultPrevented || document.querySelector("dialog[open]")) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
     if (paletteOpen.value) closePalette();
@@ -118,13 +142,22 @@ async function closePanel(): Promise<void> {
   const previous = selectedMonitor.value;
   store.selectMonitor(null);
   await nextTick();
-  if (previous) office.value?.focusMonitor(previous);
+  if (mode.value === "office" && previous) office.value?.focusMonitor(previous);
+  else if (panelTrigger?.isConnected)
+    panelTrigger.focus({ preventScroll: true });
+  else if (previous)
+    document
+      .querySelector<HTMLElement>(
+        `.console-navigation [data-monitor="${previous}"]`,
+      )
+      ?.focus({ preventScroll: true });
 }
 </script>
 
 <template>
   <main
     class="command-deck"
+    :inert="paletteOpen"
     :class="{ 'is-office-mode': mode === 'office' }"
     :data-scene="scene"
   >
@@ -140,6 +173,7 @@ async function closePanel(): Promise<void> {
       <ConsoleMode
         v-if="mode === 'console'"
         :monitors="monitorStatuses"
+        :selected-monitor="selectedMonitor"
         :situation="situation"
         :status="store.status"
         :last-status-at="store.lastStatusAt"

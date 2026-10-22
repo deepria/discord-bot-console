@@ -85,7 +85,12 @@ function runtimeSeverity(): "normal" | "attention" {
           {{ store.statusInFlight ? "상태 조회 중…" : "상태 다시 조회" }}
         </button>
       </header>
-      <p v-if="refreshResult" role="status" class="panel-footnote">
+      <p
+        v-if="refreshResult"
+        role="status"
+        aria-label="상태 재조회 결과"
+        class="panel-footnote"
+      >
         {{ refreshResult }}
       </p>
       <p class="panel-footnote">

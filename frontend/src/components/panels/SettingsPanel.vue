@@ -8,6 +8,7 @@ import PresencePanel from "./PresencePanel.vue";
 
 defineProps<{ canManagePresence?: boolean }>();
 
+const panel = ref<HTMLElement | null>(null);
 const emit = defineEmits<{ close: [] }>();
 const store = useOperationsStore();
 const {
@@ -111,6 +112,7 @@ function guidance(setting: (typeof runtimeSettings.value)[number]): string {
 }
 
 onMounted(() => {
+  panel.value?.focus({ preventScroll: true });
   void Promise.all([
     store.refreshRuntimeSettings(),
     store.refreshRuntimeConfigAuditEvents(),
@@ -121,6 +123,7 @@ onMounted(() => {
 
 <template>
   <aside
+    ref="panel"
     class="monitor-panel settings-panel"
     tabindex="-1"
     aria-labelledby="runtime-settings-title"

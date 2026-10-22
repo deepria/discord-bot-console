@@ -47,6 +47,17 @@ export interface LogsResponse {
 
 export type SourceStatus = "HEALTHY" | "STALE" | "UNAVAILABLE";
 
+export interface TelemetryCoverage {
+  mode: "retained" | "legacy_tail";
+  retention_days: number;
+  collection_started_at: string | null;
+  oldest_at: string | null;
+  newest_at: string | null;
+  truncated: boolean;
+  history_limited: boolean;
+  cleanup_pending: boolean;
+}
+
 export interface TraceRecord {
   at?: string;
   turn_id?: string;
@@ -64,6 +75,7 @@ export interface TraceRecord {
 }
 
 export interface TracesResponse {
+  coverage?: TelemetryCoverage;
   source_status: SourceStatus;
   source: {
     status: SourceStatus;
@@ -80,12 +92,14 @@ export interface UsageGroup {
   calls: number;
   errors: number;
   total_tokens: number;
+  unknown_token_calls?: number;
   success_rate: number;
   p50_latency_ms: number | null;
   p95_latency_ms: number | null;
 }
 
 export interface UsageResponse {
+  coverage?: TelemetryCoverage;
   source_status: SourceStatus;
   source: {
     status: SourceStatus;

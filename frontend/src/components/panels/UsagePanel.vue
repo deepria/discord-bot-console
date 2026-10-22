@@ -2,6 +2,7 @@
 import { onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useOperationsStore } from "../../stores/operations";
+import TelemetryCoverage from "./TelemetryCoverage.vue";
 import { formatKst } from "../../utils/format";
 const store = useOperationsStore();
 const { usage, usageError, usageLoading } = storeToRefs(store);
@@ -23,7 +24,8 @@ function percent(value: number): string {
         <select v-model.number="windowHours" @change="refresh">
           <option :value="24">24 HOURS</option>
           <option :value="168">7 DAYS</option>
-          <option :value="744">31 DAYS</option>
+          <option :value="720">30 DAYS</option>
+          <option :value="2160">90 DAYS</option>
         </select></label
       ><label
         >GROUP
@@ -43,6 +45,7 @@ function percent(value: number): string {
       Usage data is stale. Last update:
       {{ formatKst(usage.source.last_success_at) }}
     </p>
+    <TelemetryCoverage :coverage="usage?.coverage" />
     <p v-if="usageLoading" class="empty-state">
       USAGE METADATA를 불러오는 중입니다.
     </p>
@@ -66,7 +69,12 @@ function percent(value: number): string {
           </div>
           <div>
             <dt>TOKENS</dt>
-            <dd>{{ group.total_tokens }}</dd>
+            <dd>
+              {{ group.total_tokens
+              }}<span v-if="group.unknown_token_calls">
+                · token 미확인 {{ group.unknown_token_calls }}건</span
+              >
+            </dd>
           </div>
           <div>
             <dt>P50 LATENCY</dt>

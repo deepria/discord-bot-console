@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useOperationsStore } from "../../stores/operations";
+import TelemetryCoverage from "./TelemetryCoverage.vue";
 import { api } from "../../services/api";
 import type { TraceRecord } from "../../types/api";
 import { formatKst } from "../../utils/format";
@@ -13,7 +14,27 @@ const selectedTurnId = ref<string | null>(null);
 const detail = ref<TraceRecord[]>([]);
 const detailError = ref<string | null>(null);
 
-onMounted(() => void store.refreshTraces());
+const windowHours = ref(720);
+const queryTo = ref(new Date().toISOString());
+let detailRequest = 0;
+onMounted(() => void refresh());
+function refresh(): void {
+  detailRequest += 1;
+  queryTo.value = new Date().toISOString();
+  selectedTurnId.value = null;
+  detail.value = [];
+  detailError.value = null;
+  void store.refreshTraces(windowHours.value, undefined, queryTo.value);
+}
+function more(): void {
+  if (traces.value?.next_cursor) {
+    void store.refreshTraces(
+      windowHours.value,
+      traces.value.next_cursor,
+      queryTo.value,
+    );
+  }
+}
 
 function label(value: unknown): string {
   return value == null || value === "" ? "-" : String(value);
@@ -21,11 +42,15 @@ function label(value: unknown): string {
 
 async function inspect(turnId: string | undefined): Promise<void> {
   if (!turnId) return;
+  const request = ++detailRequest;
   selectedTurnId.value = turnId;
+  detail.value = [];
   detailError.value = null;
   try {
-    detail.value = await api.getTrace(turnId);
+    const result = await api.getTrace(turnId);
+    if (request === detailRequest) detail.value = result;
   } catch (error) {
+    if (request !== detailRequest) return;
     detailError.value =
       error instanceof Error ? error.message : "Trace detail request failed.";
   }
@@ -34,6 +59,18 @@ async function inspect(turnId: string | undefined): Promise<void> {
 
 <template>
   <div class="panel-content stack trace-panel">
+    <div class="usage-controls">
+      <label
+        >PERIOD
+        <select v-model.number="windowHours" @change="refresh">
+          <option :value="24">24 HOURS</option>
+          <option :value="168">7 DAYS</option>
+          <option :value="720">30 DAYS</option>
+        </select></label
+      >
+      <button type="button" @click="refresh">REFRESH</button>
+    </div>
+    <TelemetryCoverage :coverage="traces?.coverage" />
     <p v-if="tracesError" class="inline-alert">{{ tracesError }}</p>
     <p v-else-if="traces?.source_status === 'UNAVAILABLE'" class="inline-alert">
       Trace source is unavailable. No prior data is shown as current.
@@ -104,6 +141,14 @@ async function inspect(turnId: string | undefined): Promise<void> {
         </dl>
       </li>
     </ol>
+    <button
+      v-if="traces?.next_cursor"
+      type="button"
+      :disabled="tracesLoading"
+      @click="more"
+    >
+      다음 기록
+    </button>
     <section
       v-if="selectedTurnId"
       class="trace-detail"
@@ -112,10 +157,13 @@ async function inspect(turnId: string | undefined): Promise<void> {
       <p class="panel-kicker">SELECTED TURN / {{ selectedTurnId }}</p>
       <p v-if="detailError" class="inline-alert">{{ detailError }}</p>
       <p v-else>
-        {{ detail.length }} EVENTS / 전체 content-free metadata를 조회했습니다.
+        {{ detail.length }} EVENTS / 선택 turn의 조회 결과입니다(최대 100건).
       </p>
     </section>
-    <p v-else-if="!tracesError" class="empty-state">
+    <p
+      v-else-if="!tracesError && !tracesLoading && !rows.length"
+      class="empty-state"
+    >
       현재 기간에 표시할 turn trace가 없습니다.
     </p>
     <p class="panel-footnote">

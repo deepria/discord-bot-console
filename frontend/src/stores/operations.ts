@@ -654,34 +654,58 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
-  async function refreshTraces(): Promise<void> {
-    if (tracesLoading.value) return;
+  let tracesRequest = 0;
+  async function refreshTraces(
+    windowHours = 720,
+    cursor?: string,
+    to = new Date().toISOString(),
+  ): Promise<void> {
+    const request = ++tracesRequest;
     tracesLoading.value = true;
+    if (!cursor) traces.value = null;
     try {
-      traces.value = await api.getTraces();
+      const result = await api.getTraces(50, {
+        from: new Date(Date.parse(to) - windowHours * 3600000).toISOString(),
+        to,
+        cursor,
+      });
+      if (request !== tracesRequest) return;
+      traces.value =
+        cursor && traces.value
+          ? {
+              ...result,
+              traces: [...traces.value.traces, ...result.traces],
+            }
+          : result;
       tracesError.value = null;
     } catch (error) {
+      if (request !== tracesRequest) return;
       tracesError.value =
         error instanceof Error ? error.message : "Trace request failed.";
     } finally {
-      tracesLoading.value = false;
+      if (request === tracesRequest) tracesLoading.value = false;
     }
   }
 
+  let usageRequest = 0;
   async function refreshUsage(
     windowHours = 24,
     groupBy: "provider" | "model" = "provider",
   ): Promise<void> {
-    if (usageLoading.value) return;
+    const request = ++usageRequest;
     usageLoading.value = true;
+    usage.value = null;
     try {
-      usage.value = await api.getUsage(windowHours, groupBy);
+      const result = await api.getUsage(windowHours, groupBy);
+      if (request !== usageRequest) return;
+      usage.value = result;
       usageError.value = null;
     } catch (error) {
+      if (request !== usageRequest) return;
       usageError.value =
         error instanceof Error ? error.message : "Usage request failed.";
     } finally {
-      usageLoading.value = false;
+      if (request === usageRequest) usageLoading.value = false;
     }
   }
   async function refreshMemoryMetadata(cursor?: number): Promise<void> {

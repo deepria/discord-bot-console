@@ -4,7 +4,7 @@ import type { MonitorId } from "../../types/api";
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{
-  close: [];
+  close: [restoreFocus?: boolean];
   select: [id: MonitorId];
   settings: [];
 }>();
@@ -19,6 +19,11 @@ const commands: { id: MonitorId; label: string; keywords: string }[] = [
     keywords: "system status discord ai data link 상태 연결 런타임",
   },
   { id: "events", label: "Live Events 열기", keywords: "events 이벤트" },
+  {
+    id: "memory",
+    label: "Memory Index 열기",
+    keywords: "memory 기억 검수 소유자",
+  },
   { id: "logs", label: "Log Stream 열기", keywords: "logs log 로그" },
   {
     id: "traces",
@@ -69,7 +74,7 @@ watch(
 function choose(id: MonitorId | "settings"): void {
   if (id === "settings") emit("settings");
   else emit("select", id);
-  emit("close");
+  emit("close", false);
 }
 
 function onKeydown(event: KeyboardEvent): void {

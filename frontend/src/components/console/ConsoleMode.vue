@@ -15,6 +15,7 @@ const props = defineProps<{
   monitors: Record<MonitorId, MonitorStatus>;
   situation: Situation;
   status: BotStatus | null;
+  selectedMonitor?: MonitorId | null;
   lastStatusAt: Date | null;
   authActor: ConsoleActor | null;
   oauthEnabled: boolean;
@@ -61,7 +62,12 @@ function inspectSituation(): void {
         <button type="button" class="mode-switch" @click="$emit('office')">
           OFFICE MODE
         </button>
-        <button type="button" class="mode-switch" @click="$emit('settings')">
+        <button
+          type="button"
+          class="mode-switch"
+          data-settings-trigger
+          @click="$emit('settings')"
+        >
           SETTINGS
         </button>
         <a
@@ -91,6 +97,11 @@ function inspectSituation(): void {
             :key="monitor.id"
             type="button"
             :class="`severity-${monitor.severity}`"
+            :data-monitor="monitor.id"
+            :aria-expanded="selectedMonitor === monitor.id"
+            :aria-controls="
+              selectedMonitor === monitor.id ? 'monitor-panel' : undefined
+            "
             :aria-label="`${monitor.label}: ${monitor.summary}`"
             @click="$emit('select', monitor.id)"
           >
@@ -101,6 +112,7 @@ function inspectSituation(): void {
         <button
           type="button"
           class="console-settings"
+          data-settings-trigger
           @click="$emit('settings')"
         >
           <span>RUNTIME SETTINGS</span><small>READ ONLY</small>

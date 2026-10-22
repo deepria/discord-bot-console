@@ -822,18 +822,18 @@ test("public recovery retries status reads and keeps service controls disabled",
   await recovery
     .getByRole("button", { name: "상태 다시 조회", exact: true })
     .click();
-  await expect(recovery.getByRole("status")).toContainText(
-    "일부 상태를 조회하지 못했습니다",
-  );
+  await expect(
+    recovery.getByRole("status", { name: "상태 재조회 결과" }),
+  ).toContainText("일부 상태를 조회하지 못했습니다");
   await expect(
     page.getByText("Agent status unavailable", { exact: true }).first(),
   ).toBeVisible();
   await recovery
     .getByRole("button", { name: "상태 다시 조회", exact: true })
     .click();
-  await expect(recovery.getByRole("status")).toContainText(
-    "최신 상태를 다시 조회했습니다",
-  );
+  await expect(
+    recovery.getByRole("status", { name: "상태 재조회 결과" }),
+  ).toContainText("최신 상태를 다시 조회했습니다");
   expect(writes).toBe(0);
   await page.getByRole("button", { name: "상세 패널 닫기" }).click();
   await page.getByRole("button", { name: /RIO CONTROL:/ }).click();
@@ -902,4 +902,307 @@ test("admin confirms recovery restart and pending state survives panel changes",
     animations: "disabled",
     fullPage: true,
   });
+});
+
+test("settings confirmations have unique accessible labels", async ({
+  page,
+}, testInfo) => {
+  await mockConsole(page, healthy, { id: "42", role: "admin" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  const labels = await page.locator("dialog").evaluateAll((dialogs) =>
+    dialogs.map((dialog) => {
+      const id = dialog.getAttribute("aria-labelledby");
+      return {
+        id,
+        count: [...document.querySelectorAll("[id]")].filter(
+          (node) => node.id === id,
+        ).length,
+      };
+    }),
+  );
+  expect(labels.length).toBeGreaterThanOrEqual(3);
+  expect(labels.every((label) => label.id && label.count === 1)).toBe(true);
+  let writes = 0;
+  page.on("request", (request) => {
+    if (request.method() === "PUT") writes++;
+  });
+  const apply = page.getByRole("button", { name: "Apply", exact: true });
+  await apply.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", {
+    name: "Discord Presence 변경",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAccessibleDescription(
+    /적용하고 재시작 후에도 유지/,
+  );
+  const cancel = dialog.getByRole("button", { name: "취소", exact: true });
+  await expect(cancel).toBeFocused();
+  await page.screenshot({
+    path: testInfo.outputPath("keyboard-confirmation.png"),
+    animations: "disabled",
+    fullPage: true,
+  });
+  await page.keyboard.press("Shift+Tab");
+  await expect(
+    dialog.getByRole("button", { name: "Apply", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    dialog.getByRole("button", { name: "Apply", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press("ControlOrMeta+K");
+  await expect(page.getByRole("dialog", { name: "명령 팔레트" })).toHaveCount(
+    0,
+  );
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeHidden();
+  await expect(apply).toBeFocused();
+  expect(writes).toBe(0);
+});
+
+test("keyboard panel close restores the console navigation trigger", async ({
+  page,
+}) => {
+  await mockConsole(page);
+  await page.goto("/");
+  const trigger = page.getByRole("button", {
+    name: /OPERATIONS STATUS: ONLINE/,
+  });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const panel = page.getByRole("complementary", {
+    name: "OPERATIONS STATUS",
+    exact: true,
+  });
+  await expect(panel).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test("keyboard settings open and close preserve focus", async ({ page }) => {
+  await mockConsole(page);
+  await page.goto("/");
+  const trigger = page.getByRole("button", { name: "SETTINGS", exact: true });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const settings = page.getByRole("complementary", {
+    name: "RUNTIME SETTINGS",
+    exact: true,
+  });
+  await expect(settings).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(settings).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test("palette keyboard isolation and selection preserve the destination focus", async ({
+  page,
+}) => {
+  await mockConsole(page);
+  await page.goto("/");
+  const trigger = page.getByRole("button", { name: "명령 팔레트 열기" });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const palette = page.getByRole("dialog", { name: "명령 팔레트" });
+  const search = palette.getByRole("searchbox", { name: "명령 검색" });
+  await expect(search).toBeFocused();
+  await expect(page.locator(".command-deck")).toHaveAttribute("inert", "");
+  await palette.getByRole("button").last().focus();
+  await page.keyboard.press("Tab");
+  await expect(search).toBeFocused();
+  await search.fill("not-a-command");
+  await page.keyboard.press("Tab");
+  await expect(search).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(palette).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await expect(page.locator(".command-deck")).not.toHaveAttribute("inert", "");
+  await page.keyboard.press("Enter");
+  await search.fill("기억");
+  await expect(
+    palette.getByRole("button", { name: "Memory Index 열기" }),
+  ).toBeVisible();
+  await search.fill("logs");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  const panel = page.getByRole("complementary", {
+    name: "LOG STREAM",
+    exact: true,
+  });
+  await expect(panel).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: /LOG STREAM: OPEN/ }),
+  ).toBeFocused();
+});
+
+test("keyboard focus indicators and reduced motion remain visible", async ({
+  page,
+}) => {
+  await mockConsole(page, healthy, { id: "42", role: "admin" });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const trigger = page.getByRole("button", {
+    name: /OPERATIONS STATUS: ONLINE/,
+  });
+  await page.keyboard.press("Tab");
+  await trigger.focus();
+  await expect(trigger).toBeFocused();
+  const indicator = await page.evaluate(() => {
+    const style = getComputedStyle(document.activeElement!);
+    return { width: parseFloat(style.outlineWidth), style: style.outlineStyle };
+  });
+  expect(indicator.width).toBeGreaterThanOrEqual(2);
+  expect(indicator.style).not.toBe("none");
+  const duration = await page
+    .locator(".command-deck")
+    .evaluate((node) => parseFloat(getComputedStyle(node).transitionDuration));
+  expect(duration).toBeLessThan(0.01);
+  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  const field = page.locator("#presence-mode");
+  await field.focus();
+  await expect(field).toBeFocused();
+  const formIndicator = await page.evaluate(
+    () => getComputedStyle(document.activeElement!).outlineStyle,
+  );
+  expect(formIndicator).not.toBe("none");
+});
+
+test("normal and alert theme text tokens meet minimum contrast on fixed surfaces", async ({
+  page,
+}, testInfo) => {
+  type Color = [number, number, number, number];
+  const parse = (value: string): Color => {
+    if (value.startsWith("#"))
+      return [
+        parseInt(value.slice(1, 3), 16),
+        parseInt(value.slice(3, 5), 16),
+        parseInt(value.slice(5, 7), 16),
+        1,
+      ];
+    const numbers = value.match(/[\d.]+/g)!.map(Number);
+    return [numbers[0]!, numbers[1]!, numbers[2]!, numbers[3] ?? 1];
+  };
+  const over = (front: Color, back: Color): Color =>
+    [0, 1, 2]
+      .map((i) => front[i]! * front[3] + back[i]! * (1 - front[3]))
+      .concat(1) as Color;
+  const luminance = (c: Color) =>
+    c
+      .slice(0, 3)
+      .map((v) => {
+        const x = v / 255;
+        return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+      })
+      .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i]!, 0);
+  const samples: {
+    theme: string;
+    text: string;
+    surface: string;
+    ratio: number;
+  }[] = [];
+  for (const theme of ["healthy", "alert"]) {
+    await mockConsole(page, { ...healthy, online: theme === "healthy" });
+    await page.goto("/");
+    const deck = page.locator(".command-deck");
+    await expect(deck).toHaveAttribute("data-scene", theme);
+    const tokens = await deck.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return Object.fromEntries(
+        [
+          "--ink",
+          "--muted",
+          "--accent",
+          "--attention",
+          "--danger",
+          "--dark",
+          "--surface",
+          "--surface-strong",
+        ].map((key) => [key, style.getPropertyValue(key).trim()]),
+      );
+    });
+    const dark = parse(tokens["--dark"]!);
+    const accent = parse(tokens["--accent"]!);
+    const surfaces: Record<string, Color> = {
+      dark,
+      surface: over(parse(tokens["--surface"]!), dark),
+      strong: over(parse(tokens["--surface-strong"]!), dark),
+      panel: [3, 15, 27, 1],
+      panelTint: over([accent[0], accent[1], accent[2], 0.11], [3, 15, 27, 1]),
+      confirmation: [24, 10, 33, 1],
+    };
+    for (const text of [
+      "--ink",
+      "--muted",
+      "--accent",
+      "--attention",
+      "--danger",
+    ])
+      for (const [surface, bg] of Object.entries(surfaces)) {
+        const a = luminance(parse(tokens[text]!));
+        const b = luminance(bg);
+        const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        samples.push({ theme, text, surface, ratio });
+        expect(ratio, `${theme} ${text} on ${surface}`).toBeGreaterThanOrEqual(
+          4.5,
+        );
+      }
+  }
+  await testInfo.attach("fixed-surface-contrast", {
+    body: JSON.stringify(samples, null, 2),
+    contentType: "application/json",
+  });
+});
+
+test("confirmation returns focus to the panel while its source is disabled", async ({
+  page,
+}) => {
+  await mockConsole(page, healthy, { id: "42", role: "admin" });
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/bot/presence**", async (route) => {
+    if (route.request().method() === "PUT") {
+      await gate;
+      await route.fulfill({
+        status: 400,
+        json: { detail: "Synthetic validation rejection" },
+      });
+    } else await route.fulfill({ json: presenceFixture() });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  const settings = page.getByRole("complementary", {
+    name: "RUNTIME SETTINGS",
+    exact: true,
+  });
+  await settings.getByRole("button", { name: "Apply", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", {
+    name: "Discord Presence 변경",
+    exact: true,
+  });
+  await dialog.getByRole("button", { name: "Apply", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeHidden();
+  await expect(settings).toBeFocused();
+  await expect(
+    settings.getByRole("button", { name: "적용 확인 중…", exact: true }),
+  ).toBeDisabled();
+  release();
+  await expect(
+    settings
+      .getByRole("region", { name: "DISCORD PRESENCE", exact: true })
+      .getByRole("status"),
+  ).toContainText("Synthetic validation rejection");
 });

@@ -125,7 +125,6 @@
 .console-navigation button:hover,
 .console-navigation button:focus-visible {
   border-color: var(--line);
-  outline: none;
   background: rgba(var(--accent-rgb), 0.08);
 }
 
@@ -160,7 +159,6 @@
 .console-settings:hover,
 .console-settings:focus-visible {
   border-color: var(--accent);
-  outline: none;
   background: rgba(var(--accent-rgb), 0.16);
 }
 

@@ -227,3 +227,14 @@ Source health and global collection statistics are separate from content quality
 changed by the owner filter. Existing public metadata and admin-only, audited, no-store body
 access policies remain in place. `owner_private` means private to that candidate's owner, not
 necessarily the administrator currently inspecting it. Deploy Agent owner_id support first.
+
+## Telemetry period coverage
+
+Trace supports 24h/7d/30d filters and cursor paging. Usage supports up to 90 days.
+Deploy the retained Bot writer, then Agent reader, then this Console. Both panels display
+collection start, current record bounds, partial/legacy queries and pending expiry cleanup.
+A readable store is not evidence of continuous history. Unknown token totals are counted
+separately; exact p50/p95 are computed from the observed call samples by Agent.
+The Bot expiry timer must be installed on CT 101 after preview review. Console neither opens
+the Bot database nor performs expiry. Existing Agents without coverage stay compatible,
+with an explicit unknown-coverage notice.

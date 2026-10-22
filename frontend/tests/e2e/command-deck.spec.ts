@@ -1206,3 +1206,81 @@ test("confirmation returns focus to the panel while its source is disabled", asy
       .getByRole("status"),
   ).toContainText("Synthetic validation rejection");
 });
+
+test("retained Usage shows coverage limits and requests 90 days", async ({
+  page,
+}, testInfo) => {
+  await mockConsole(page);
+  const requested: string[] = [];
+  await page.route("**/api/analytics/usage?**", (route) => {
+    requested.push(route.request().url());
+    return route.fulfill({
+      json: {
+        source_status: "HEALTHY",
+        source: { status: "HEALTHY", last_success_at: null, error_code: null },
+        group_by: "provider",
+        groups: [],
+        coverage: {
+          mode: "retained",
+          retention_days: 90,
+          collection_started_at: "2026-10-22T00:00:00Z",
+          oldest_at: null,
+          newest_at: null,
+          truncated: true,
+          history_limited: true,
+          cleanup_pending: false,
+        },
+      },
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /^USAGE ANALYTICS:/ }).click();
+  const panel = page.getByRole("complementary", {
+    name: "USAGE ANALYTICS",
+    exact: true,
+  });
+  await panel.getByLabel("PERIOD").selectOption("2160");
+  await expect
+    .poll(() => requested.some((url) => url.includes("window_hours=2160")))
+    .toBe(true);
+  await expect(panel).toContainText("일부 자료만 표시");
+  await expect(panel).toContainText("보존 시작 전");
+  await expect(panel).toContainText("현재 보존 기록이 없습니다");
+  await panel.screenshot({
+    path: testInfo.outputPath("telemetry-coverage.png"),
+  });
+});
+
+test("Trace legacy tail is never displayed as a complete retained period", async ({
+  page,
+}) => {
+  await mockConsole(page);
+  await page.route("**/api/traces?**", (route) =>
+    route.fulfill({
+      json: {
+        source_status: "HEALTHY",
+        source: { status: "HEALTHY", last_success_at: null, error_code: null },
+        traces: [],
+        next_cursor: null,
+        coverage: {
+          mode: "legacy_tail",
+          retention_days: 30,
+          collection_started_at: null,
+          oldest_at: null,
+          newest_at: null,
+          truncated: true,
+          history_limited: true,
+          cleanup_pending: false,
+        },
+      },
+    }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: /^TURN TRACES:/ }).click();
+  const panel = page.getByRole("complementary", {
+    name: "TURN TRACES",
+    exact: true,
+  });
+  await expect(panel).toContainText("최근 로그 일부만");
+  await expect(panel.getByLabel("PERIOD")).toHaveValue("720");
+});

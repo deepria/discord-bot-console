@@ -285,3 +285,29 @@ def test_service_controls_reject_viewers_before_contacting_agent(monkeypatch):
         response = client.post(f"/api/bot/{action}")
         assert response.status_code == 403
     assert calls == []
+
+
+def test_retained_usage_proxy_supports_90_days_and_preserves_coverage(monkeypatch):
+    from urllib.parse import parse_qs, urlsplit
+
+    coverage = {"mode": "retained", "retention_days": 90, "truncated": True}
+
+    async def fake_agent_get(path):
+        query = parse_qs(urlsplit(path).query)
+        start = datetime.fromisoformat(query["from"][0].replace("Z", "+00:00"))
+        end = datetime.fromisoformat(query["to"][0].replace("Z", "+00:00"))
+        assert end - start == timedelta(days=90)
+        return {"source_status": "HEALTHY", "groups": [], "coverage": coverage}
+
+    monkeypatch.setattr(app_module, "agent_get", fake_agent_get)
+    response = client.get("/api/analytics/usage?window_hours=2160")
+    assert response.status_code == 200
+    assert response.json()["coverage"] == coverage
+
+
+def test_trace_proxy_rejects_unzoned_dates_before_agent_call(monkeypatch):
+    async def no_call(path):
+        raise AssertionError("Agent must not be called")
+
+    monkeypatch.setattr(app_module, "agent_get", no_call)
+    assert client.get("/api/traces?from=2026-10-22T00:00:00").status_code == 422

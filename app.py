@@ -435,6 +435,8 @@ async def traces(
     """Proxy bounded, content-free Agent trace metadata only."""
     limit = max(1, min(limit, 100))
     query = {"limit": str(limit)}
+    if any(value is not None and value.tzinfo is None for value in (from_, to)):
+        raise HTTPException(status_code=422, detail="Timestamps must include a timezone")
     if from_:
         query["from"] = from_.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     if to:
@@ -454,7 +456,7 @@ async def usage_analytics(
     window_hours: int = 24,
     group_by: Literal["provider", "model"] = "provider",
 ):
-    window_hours = max(1, min(window_hours, 31 * 24))
+    window_hours = max(1, min(window_hours, 90 * 24))
     now = datetime.now(timezone.utc)
     query = urlencode({
         "from": (now - timedelta(hours=window_hours)).isoformat().replace("+00:00", "Z"),

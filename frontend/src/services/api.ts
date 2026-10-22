@@ -20,6 +20,7 @@ import type {
   TraceRecord,
   TracesResponse,
   UsageResponse,
+  TelemetryCoverage,
   MemoryResponse,
   MemoryDetailResponse,
   MemoryEvaluationResponse,
@@ -131,6 +132,44 @@ function parseTrace(value: unknown): TraceRecord | null {
   };
 }
 
+function parseCoverage(value: unknown): TelemetryCoverage | undefined {
+  if (value === undefined) return undefined;
+  if (
+    !isRecord(value) ||
+    !["retained", "legacy_tail"].includes(String(value.mode)) ||
+    ![30, 90].includes(Number(value.retention_days)) ||
+    typeof value.retention_days !== "number" ||
+    typeof value.truncated !== "boolean" ||
+    typeof value.history_limited !== "boolean" ||
+    typeof value.cleanup_pending !== "boolean"
+  ) {
+    throw new ApiError("Telemetry coverage response is invalid.");
+  }
+  for (const key of [
+    "collection_started_at",
+    "oldest_at",
+    "newest_at",
+  ] as const) {
+    if (
+      value[key] !== null &&
+      (typeof value[key] !== "string" ||
+        !Number.isFinite(Date.parse(value[key] as string)))
+    ) {
+      throw new ApiError("Telemetry coverage timestamp is invalid.");
+    }
+  }
+  return {
+    mode: value.mode as TelemetryCoverage["mode"],
+    retention_days: value.retention_days,
+    collection_started_at: nullableTimestamp(value.collection_started_at),
+    oldest_at: nullableTimestamp(value.oldest_at),
+    newest_at: nullableTimestamp(value.newest_at),
+    truncated: value.truncated,
+    history_limited: value.history_limited,
+    cleanup_pending: value.cleanup_pending,
+  };
+}
+
 function parseTraces(value: unknown): TracesResponse {
   if (
     !isRecord(value) ||
@@ -155,6 +194,7 @@ function parseTraces(value: unknown): TracesResponse {
       last_success_at: nullableTimestamp(value.source.last_success_at),
       error_code: nullableString(value.source.error_code),
     },
+    coverage: parseCoverage(value.coverage),
     traces: traces as TraceRecord[],
     next_cursor: nullableString(value.next_cursor),
   };
@@ -203,6 +243,8 @@ function parseUsage(value: unknown): UsageResponse {
       calls,
       errors,
       total_tokens: totalTokens,
+      unknown_token_calls:
+        nullableNumber(group.unknown_token_calls) ?? undefined,
       success_rate: successRate,
       p50_latency_ms: nullableNumber(group.p50_latency_ms),
       p95_latency_ms: nullableNumber(group.p95_latency_ms),
@@ -215,6 +257,7 @@ function parseUsage(value: unknown): UsageResponse {
       last_success_at: nullableTimestamp(value.source.last_success_at),
       error_code: nullableString(value.source.error_code),
     },
+    coverage: parseCoverage(value.coverage),
     group_by: value.group_by,
     groups,
   };
@@ -938,12 +981,19 @@ export const api = {
       await requestJson(`/api/logs?lines=${Math.max(1, Math.min(lines, 500))}`),
     );
   },
-  async getTraces(limit = 50): Promise<TracesResponse> {
-    return parseTraces(
-      await requestJson(
-        `/api/traces?limit=${Math.max(1, Math.min(limit, 100))}`,
-      ),
-    );
+  async getTraces(
+    limit = 50,
+    options?: { from: string; to: string; cursor?: string },
+  ): Promise<TracesResponse> {
+    const query = new URLSearchParams({
+      limit: String(Math.max(1, Math.min(limit, 100))),
+    });
+    if (options) {
+      query.set("from", options.from);
+      query.set("to", options.to);
+      if (options.cursor) query.set("cursor", options.cursor);
+    }
+    return parseTraces(await requestJson(`/api/traces?${query}`));
   },
   async getTrace(turnId: string): Promise<TraceRecord[]> {
     return parseTraceDetail(
@@ -956,7 +1006,7 @@ export const api = {
   ): Promise<UsageResponse> {
     return parseUsage(
       await requestJson(
-        `/api/analytics/usage?window_hours=${Math.max(1, Math.min(windowHours, 744))}&group_by=${groupBy}`,
+        `/api/analytics/usage?window_hours=${Math.max(1, Math.min(windowHours, 2160))}&group_by=${groupBy}`,
       ),
     );
   },

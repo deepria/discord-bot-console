@@ -1,0 +1,12 @@
+[Unit]
+Description=Verify Rio Console deployment state from Coolify and Docker
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0022
+EnvironmentFile=/etc/rio-console-monitor/observer.env
+ExecStart=/usr/bin/python3 /usr/local/libexec/rio-console-observe.py --application-uuid ${RIO_CONSOLE_APPLICATION_UUID} --token-file /etc/rio-console-monitor/coolify-read.token --output /var/lib/rio-console-monitor/status/deploy-status.json
+TimeoutStartSec=90

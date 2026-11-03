@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh Rio Console deployment observations
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=60s
+Unit=rio-console-observe.service
+
+[Install]
+WantedBy=timers.target

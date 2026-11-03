@@ -19,9 +19,20 @@ class DeploymentError(Exception):
 
 
 class RequestError(DeploymentError):
-    def __init__(self, status: int | None):
+    def __init__(self, status: int | None, headers=None):
         self.status = status
-        super().__init__(f"HTTP {status}" if status else "connection failed")
+        headers = headers or {}
+        content_type = headers.get("Content-Type", "").split(";", 1)[0].lower()
+        self.response_type = content_type if content_type in {"application/json", "text/html", "text/plain"} else "other"
+        self.challenge = headers.get("cf-mitigated", "").lower() == "challenge"
+        ray = headers.get("cf-ray", "")
+        self.ray = ray if re.fullmatch(r"[a-fA-F0-9]{8,32}-[A-Z0-9]{2,8}", ray) else None
+        message = f"HTTP {status}" if status else "connection failed"
+        if status:
+            message += f"; response={self.response_type}; challenge={self.challenge}"
+            if self.ray:
+                message += f"; cf-ray={self.ray}"
+        super().__init__(message)
 
     @property
     def retryable(self) -> bool:
@@ -37,17 +48,18 @@ def request_json(url: str, method: str = "GET", headers: dict | None = None, bod
     data = None if body is None else json.dumps(body).encode()
     request = urllib.request.Request(url, method=method, data=data, headers={
         "Accept": "application/json", "Cache-Control": "no-cache",
+        "User-Agent": "rio-console-deployer/1.0",
         **({"Content-Type": "application/json"} if body is not None else {}),
         **(headers or {}),
     })
     try:
         with urllib.request.build_opener(NoRedirect).open(request, timeout=20) as response:
             if response.status != 200:
-                raise RequestError(response.status)
+                raise RequestError(response.status, response.headers)
             return json.load(response)
     except urllib.error.HTTPError as error:
         # Do not echo response bodies or headers: they may contain secrets or login pages.
-        raise RequestError(error.code) from None
+        raise RequestError(error.code, error.headers) from None
     except (urllib.error.URLError, TimeoutError, OSError):
         raise RequestError(None) from None
     except (ValueError, UnicodeError):
@@ -65,6 +77,19 @@ class CoolifyClient:
         token = self.deploy_token if deploy else self.config_token
         return request_json(self.base + path, method,
                             self.access | {"Authorization": "Bearer " + token}, body)
+
+    def diagnose_read_access(self) -> None:
+        # Fixed read-only probes; response bodies, credentials and redirect locations stay private.
+        for name, headers in [
+            ("Cloudflare-only probe (expected HTTP 401)", self.access),
+            ("Cloudflare+config probe (expected HTTP 200)",
+             self.access | {"Authorization": "Bearer " + self.config_token}),
+        ]:
+            try:
+                request_json(self.base + "/teams/current", headers=headers)
+                print(name + ": HTTP 200", flush=True)
+            except DeploymentError as error:
+                print(name + ": " + str(error), flush=True)
 
 
 def verify_application(app: dict, uuid: str, image: str) -> None:
@@ -179,6 +204,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--revision", required=True)
     args = parser.parse_args()
+    client = None
     try:
         names = ["CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET", "COOLIFY_CONFIG_TOKEN", "COOLIFY_DEPLOY_TOKEN"]
         if any(not os.environ.get(name, "").strip() for name in names):
@@ -199,6 +225,8 @@ def main() -> None:
     except (DeploymentError, KeyError) as error:
         message = str(error) if isinstance(error, DeploymentError) else "A required deployment setting is missing."
         print("Deployment failed:", message, flush=True)
+        if isinstance(error, RequestError) and error.status in {401, 403} and client is not None:
+            client.diagnose_read_access()
         raise SystemExit(1) from None
 
 

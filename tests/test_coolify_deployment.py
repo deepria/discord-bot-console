@@ -155,6 +155,7 @@ def test_http_integration_separates_credentials_and_waits_for_current_observatio
             assert self.headers.get("Authorization") == expected
             assert self.headers.get("CF-Access-Client-Id") == "fake-id"
             assert self.headers.get("CF-Access-Client-Secret") == "fake-secret"
+            assert self.headers.get("User-Agent") == "rio-console-deployer/1.0"
 
         def do_GET(self):
             calls.append(("GET", self.path))
@@ -246,3 +247,30 @@ def test_production_origins_reject_credentials_paths_and_cleartext():
     for url in ["http://coolify.example", "https://user:password@coolify.example",
                 "https://coolify.example/api", "https://coolify.example?token=x"]:
         assert_rejected(lambda: module.require_origin(url))
+
+
+def test_error_diagnostics_expose_only_allowlisted_metadata():
+    error = module.RequestError(403, {
+        "Content-Type": "text/html; charset=UTF-8", "cf-mitigated": "challenge",
+        "cf-ray": "0123456789abcdef-IAD", "Authorization": "Bearer do-not-log",
+        "Location": "https://login.example/?secret=do-not-log",
+    })
+    assert error.challenge
+    assert error.response_type == "text/html"
+    assert "0123456789abcdef-IAD" in str(error)
+    assert "do-not-log" not in str(error)
+    assert "login.example" not in str(error)
+    malicious = module.RequestError(403, {"Content-Type": "secret-value", "cf-ray": "secret-value"})
+    assert "secret-value" not in str(malicious)
+
+
+def test_access_diagnostics_are_read_only_and_never_send_deploy_token():
+    client = module.CoolifyClient("https://coolify.example", "client", "secret", "config-token", "deploy-token")
+    with patch.object(module, "request_json", side_effect=[module.RequestError(401), {}]) as request:
+        client.diagnose_read_access()
+    assert request.call_count == 2
+    first, second = request.call_args_list
+    assert first.args == ("https://coolify.example/api/v1/teams/current",)
+    assert "Authorization" not in first.kwargs["headers"]
+    assert second.kwargs["headers"]["Authorization"] == "Bearer config-token"
+    assert all("deploy-token" not in str(call) for call in request.call_args_list)

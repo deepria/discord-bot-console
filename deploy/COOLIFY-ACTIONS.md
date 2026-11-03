@@ -37,6 +37,13 @@ are rejected and error bodies are not logged. Mutation requests are not retried
 automatically to avoid duplicate deployment requests. Transient read failures
 are retried within the 15-minute verification window.
 
+Requests identify the client as `rio-console-deployer/1.0` rather than Python's
+library-default User-Agent. On authentication errors the log includes only the
+HTTP status, allowlisted response type, Cloudflare challenge flag and a validated
+Ray ID. Read-only `/teams/current` probes distinguish Cloudflare-only access
+(expected 401) from Cloudflare plus the config token (expected 200). They never
+send the deploy token or print credentials, response bodies or login locations.
+
 The `rio-console-observe.timer` service and read-only status-directory mount must
 remain installed. See [COOLIFY-OBSERVER.md](COOLIFY-OBSERVER.md). A successful API
 deployment alone is insufficient when the observer is stopped, stale or reporting

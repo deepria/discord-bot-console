@@ -81,3 +81,48 @@ jobs:
         if: always()
         run: docker logout ghcr.io
 
+  deploy-production:
+    name: Deploy and verify Rio production
+    needs: publish-image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: rio-production-deployment
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check this is still the latest main commit
+        id: current
+        run: |
+          set -euo pipefail
+          latest_sha=$(git ls-remote origin refs/heads/main | cut -f1)
+          [[ "$latest_sha" =~ ^[0-9a-f]{40}$ ]]
+          if [ "$latest_sha" = "$GITHUB_SHA" ]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'deploy=false' >> "$GITHUB_OUTPUT"
+            echo 'Skipped production deployment: a newer main commit exists.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Update SHA image, deploy, and verify runtime
+        if: steps.current.outputs.deploy == 'true'
+        env:
+          COOLIFY_BASE_URL: https://coolify.deepria.com
+          COOLIFY_APPLICATION_UUID: mbz2qkppo9ba8bhep6l1hond
+          RIO_CONSOLE_URL: https://rio.deepria.com
+          RIO_IMAGE_NAME: ghcr.io/deepria/discord-bot-console
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          COOLIFY_CONFIG_TOKEN: ${{ secrets.COOLIFY_CONFIG_TOKEN }}
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: python scripts/deploy_coolify.py --revision "$GITHUB_SHA"
+

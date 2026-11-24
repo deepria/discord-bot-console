@@ -77,6 +77,7 @@ async function confirmPolicyWrite() {
 function constraint(setting: (typeof runtimeSettings.value)[number]): string {
   if (setting.kind === "bool") return "on/off";
   if (setting.kind === "prefixes") return "쉼표 구분 접두어";
+  if (setting.kind === "channel_ids") return "쉼표 구분 채널 ID";
   if (setting.minimum !== null || setting.maximum !== null) {
     return `${setting.minimum ?? "-∞"}–${setting.maximum ?? "∞"}`;
   }
@@ -88,6 +89,8 @@ function guidance(setting: (typeof runtimeSettings.value)[number]): string {
     call_prefixes:
       "예: 리오야, 리오 — 메시지 첫머리의 두 문구를 호출로 인식합니다.",
     dm_always_reply: "예: on — DM에서 멘션이나 접두어 없이도 응답합니다.",
+    always_reply_channel_ids:
+      "자동응답을 켤 서버 채널 ID를 쉼표로 구분해 입력하세요. 모두 끄려면 none을 입력하세요.",
     public_memory_in_dm:
       "예: off — DM 답변에서 서버 공개 기억을 참조하지 않습니다.",
     chat_web_search:

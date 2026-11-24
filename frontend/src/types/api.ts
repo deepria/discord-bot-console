@@ -217,7 +217,8 @@ export interface DeploymentsResponse {
   deployments: DeploymentRecord[];
 }
 
-export type RuntimeSettingKind = "bool" | "int" | "prefixes" | "string";
+export type RuntimeSettingKind =
+  "bool" | "int" | "prefixes" | "string" | "channel_ids";
 export type RuntimeSettingSource = "db" | "startup";
 
 export interface RuntimeSetting {

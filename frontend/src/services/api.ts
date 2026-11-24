@@ -411,22 +411,47 @@ function parseOperations(value: unknown): {
   return { operations: operations as PersistentOperationRecord[] };
 }
 
+function parseRuntimeSettingValue(
+  kind: RuntimeSettingKind,
+  value: unknown,
+  displayValue: string,
+): RuntimeSetting["value"] | null {
+  if (kind === "channel_ids") {
+    if (!Array.isArray(value)) return null;
+    // The Bot's display string preserves all digits when JSON numbers round in JavaScript.
+    const ids = displayValue === "(비움)" ? [] : displayValue.split(/,\s*/);
+    if (
+      ids.length !== value.length ||
+      !ids.every(
+        (id, index) =>
+          /^[1-9]\d{0,19}$/.test(id) &&
+          BigInt(id) < 2n ** 64n &&
+          (id === value[index] || Number(id) === value[index]),
+      )
+    ) {
+      return null;
+    }
+    return ids;
+  }
+  if (
+    typeof value === "boolean" ||
+    typeof value === "number" ||
+    typeof value === "string" ||
+    (Array.isArray(value) && value.every((item) => typeof item === "string"))
+  ) {
+    return value;
+  }
+  return null;
+}
+
 function parseRuntimeSetting(value: unknown): RuntimeSetting | null {
   if (!isRecord(value)) return null;
   const kind = nullableString(value.kind) as RuntimeSettingKind | null;
   const source = nullableString(value.source);
-  const rawValue = value.value;
-  const valueIsValid =
-    typeof rawValue === "boolean" ||
-    typeof rawValue === "number" ||
-    typeof rawValue === "string" ||
-    (Array.isArray(rawValue) &&
-      rawValue.every((item) => typeof item === "string"));
   if (
     !kind ||
-    !["bool", "int", "prefixes", "string"].includes(kind) ||
+    !["bool", "int", "prefixes", "string", "channel_ids"].includes(kind) ||
     (source !== "db" && source !== "startup") ||
-    !valueIsValid ||
     typeof value.key !== "string" ||
     typeof value.env_name !== "string" ||
     typeof value.display_value !== "string" ||
@@ -434,10 +459,16 @@ function parseRuntimeSetting(value: unknown): RuntimeSetting | null {
   ) {
     return null;
   }
+  const settingValue = parseRuntimeSettingValue(
+    kind,
+    value.value,
+    value.display_value,
+  );
+  if (settingValue === null) return null;
   return {
     key: value.key,
     env_name: value.env_name,
-    value: rawValue,
+    value: settingValue,
     display_value: value.display_value,
     source,
     kind,

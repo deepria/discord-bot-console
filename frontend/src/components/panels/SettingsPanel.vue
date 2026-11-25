@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useOperationsStore } from "../../stores/operations";
 import { formatKst } from "../../utils/format";
 import ConfirmDialog from "../common/ConfirmDialog.vue";
 import PresencePanel from "./PresencePanel.vue";
 
-defineProps<{ canManagePresence?: boolean }>();
+const props = defineProps<{
+  canManagePresence?: boolean;
+  workspace?: boolean;
+}>();
 
 const panel = ref<HTMLElement | null>(null);
 const emit = defineEmits<{ close: [] }>();
@@ -28,6 +31,13 @@ const {
 } = storeToRefs(store);
 const editing = ref<(typeof runtimeSettings.value)[number] | null>(null);
 const draft = ref("");
+const search = ref("");
+const filteredSettings = computed(() => {
+  const query = search.value.trim().toLowerCase();
+  return runtimeSettings.value.filter((row) =>
+    `${row.env_name} ${row.key}`.toLowerCase().includes(query),
+  );
+});
 const confirming = ref<"set" | "reset" | null>(null);
 const editingPolicy = ref<{
   policy: "memory" | "chatlog" | "capture";
@@ -116,6 +126,7 @@ function guidance(setting: (typeof runtimeSettings.value)[number]): string {
 
 onMounted(() => {
   panel.value?.focus({ preventScroll: true });
+  if (props.workspace) void store.refreshPresence();
   void Promise.all([
     store.refreshRuntimeSettings(),
     store.refreshRuntimeConfigAuditEvents(),
@@ -128,6 +139,7 @@ onMounted(() => {
   <aside
     ref="panel"
     class="monitor-panel settings-panel"
+    :class="{ 'is-inline': workspace }"
     tabindex="-1"
     aria-labelledby="runtime-settings-title"
     @keydown.esc="emit('close')"
@@ -138,6 +150,7 @@ onMounted(() => {
         <h2 id="runtime-settings-title">RUNTIME SETTINGS</h2>
       </div>
       <button
+        v-if="!workspace"
         type="button"
         class="panel-close"
         aria-label="상세 패널 닫기"
@@ -166,7 +179,14 @@ onMounted(() => {
         표시할 런타임 설정이 없습니다.
       </p>
       <div v-else class="settings-list" aria-label="런타임 설정 목록">
-        <article v-for="setting in runtimeSettings" :key="setting.key">
+        <label v-if="workspace" class="settings-search">
+          설정 이름 검색
+          <input v-model="search" type="search" />
+        </label>
+        <p v-if="workspace && search && !filteredSettings.length">
+          일치하는 설정이 없습니다.
+        </p>
+        <article v-for="setting in filteredSettings" :key="setting.key">
           <div>
             <strong>{{ setting.env_name }}</strong>
             <small>{{ constraint(setting) }}</small>
@@ -175,7 +195,7 @@ onMounted(() => {
           <span :class="`source-${setting.source}`">
             {{ setting.source === "db" ? "DB OVERRIDE" : "STARTUP" }}
           </span>
-          <div class="settings-actions">
+          <div v-if="!workspace || canManagePresence" class="settings-actions">
             <button
               type="button"
               :disabled="Boolean(runtimeSettingPending)"
@@ -239,6 +259,7 @@ onMounted(() => {
             <span
               >MEMORY {{ policy.memory_effective }} / {{ policy.memory_source }}
               <button
+                v-if="!workspace || canManagePresence"
                 type="button"
                 @click="
                   editPolicy('memory', policy.scope, policy.memory_override)
@@ -251,6 +272,7 @@ onMounted(() => {
               >CHATLOG {{ policy.chatlog_effective }} /
               {{ policy.chatlog_source }}
               <button
+                v-if="!workspace || canManagePresence"
                 type="button"
                 @click="
                   editPolicy('chatlog', policy.scope, policy.chatlog_override)
@@ -263,6 +285,7 @@ onMounted(() => {
               >CAPTURE {{ policy.capture_effective }} /
               {{ policy.capture_source }}
               <button
+                v-if="!workspace || canManagePresence"
                 type="button"
                 @click="
                   editPolicy('capture', policy.scope, policy.capture_override)

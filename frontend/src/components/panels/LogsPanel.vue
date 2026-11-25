@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
+import { useLogStream } from "../../composables/useLogStream";
 import { useOperationsStore } from "../../stores/operations";
+
+const props = defineProps<{ workspace?: boolean }>();
+if (props.workspace) useLogStream();
 
 const store = useOperationsStore();
 const { logs, logConnection, logError, unseenLogCount, followingLogs } =

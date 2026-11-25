@@ -171,3 +171,78 @@
     padding: 0.8rem;
   }
 }
+
+.operations-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+.operations-secondary a {
+  border: 1px solid var(--ops-border);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  text-decoration: none;
+}
+.operations-secondary a[aria-current="page"] {
+  color: #10151c;
+  background: var(--ops-blue);
+}
+.operations .monitor-panel.is-inline {
+  width: 100%;
+  margin: 0.8rem 0 0;
+  min-width: 0;
+  height: auto;
+  max-height: calc(100dvh - 9rem);
+  clip-path: none;
+  border-color: var(--ops-border);
+  border-radius: 0.6rem;
+  background: #19222d;
+  box-shadow: none;
+}
+.operations .trace-workspace:has(.trace-detail) {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-items: stretch;
+  overflow: hidden;
+}
+.trace-results {
+  min-width: 0;
+}
+.trace-workspace .trace-results {
+  overflow-y: auto;
+}
+.trace-workspace .trace-detail {
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  max-height: 60dvh;
+}
+.trace-detail header {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.trace-workspace .trace-list li time {
+  display: block;
+}
+.settings-search {
+  display: grid;
+  gap: 0.4rem;
+}
+
+@media (max-width: 680px) {
+  .operations .trace-workspace:has(.trace-detail) {
+    display: block;
+  }
+  .trace-workspace .trace-detail {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    max-height: none;
+    padding: 1rem;
+    overflow-y: auto;
+    background: #19222d;
+  }
+}

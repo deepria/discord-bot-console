@@ -9,7 +9,7 @@ import StatusBadge from "../common/StatusBadge.vue";
 import { STATUS_LABELS, ACTIVITY_LABELS } from "../../domain/presence";
 
 import BotControlActions from "../command/BotControlActions.vue";
-defineProps<{ canManage?: boolean }>();
+defineProps<{ canManage?: boolean; workspace?: boolean }>();
 const store = useOperationsStore();
 const refreshResult = ref("");
 async function retryStatus(): Promise<void> {
@@ -192,7 +192,14 @@ function runtimeSeverity(): "normal" | "attention" {
     >
       <header>
         <span>RECENT ERRORS / {{ recentErrors.length }}</span>
+        <RouterLink
+          v-if="workspace"
+          :to="{ path: '/investigate', query: { view: 'events' } }"
+        >
+          Live Events 보기
+        </RouterLink>
         <button
+          v-else
           type="button"
           class="control-button"
           @click="store.selectMonitor('events')"

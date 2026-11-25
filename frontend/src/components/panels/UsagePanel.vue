@@ -6,8 +6,8 @@ import { useOperationsStore } from "../../stores/operations";
 import TelemetryCoverage from "./TelemetryCoverage.vue";
 import { formatKst } from "../../utils/format";
 const props = defineProps<{ workspace?: boolean }>();
-const route = useRoute();
-const router = useRouter();
+const route = props.workspace ? useRoute() : undefined;
+const router = props.workspace ? useRouter() : undefined;
 const store = useOperationsStore();
 const { usage, usageError, usageLoading } = storeToRefs(store);
 function filterHours(value: unknown): number {
@@ -19,18 +19,20 @@ function filterHours(value: unknown): number {
         ? 2160
         : 24;
 }
-const windowHours = ref(props.workspace ? filterHours(route.query.hours) : 24);
+const windowHours = ref(
+  props.workspace ? filterHours(route?.query?.hours) : 24,
+);
 const groupBy = ref<"provider" | "model">(
-  props.workspace && route.query.group === "model" ? "model" : "provider",
+  props.workspace && route?.query?.group === "model" ? "model" : "provider",
 );
 onMounted(() => void store.refreshUsage(windowHours.value, groupBy.value));
 function refresh(): void {
   void store.refreshUsage(windowHours.value, groupBy.value);
 }
 watch(
-  () => [route.query.hours, route.query.group],
+  () => [route?.query?.hours, route?.query?.group],
   ([hours, group]) => {
-    if (!props.workspace || route.query.view !== "usage") return;
+    if (!props.workspace || route?.query?.view !== "usage") return;
     const nextHours = filterHours(hours);
     const nextGroup = group === "model" ? "model" : "provider";
     if (nextHours === windowHours.value && nextGroup === groupBy.value) return;
@@ -42,9 +44,9 @@ watch(
 
 function changeFilters() {
   if (props.workspace) {
-    void router.replace({
+    void router?.replace({
       query: {
-        ...route.query,
+        ...route?.query,
         hours: String(windowHours.value),
         group: groupBy.value,
       },

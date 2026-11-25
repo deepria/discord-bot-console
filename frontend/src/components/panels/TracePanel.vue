@@ -9,8 +9,8 @@ import type { TraceRecord } from "../../types/api";
 import { formatKst } from "../../utils/format";
 
 const props = defineProps<{ workspace?: boolean }>();
-const route = useRoute();
-const router = useRouter();
+const route = props.workspace ? useRoute() : undefined;
+const router = props.workspace ? useRouter() : undefined;
 const store = useOperationsStore();
 const { traces, tracesError, tracesLoading } = storeToRefs(store);
 const rows = computed(() => traces.value?.traces ?? []);
@@ -26,17 +26,17 @@ const detailRegion = ref<HTMLElement | null>(null);
 const traceResults = ref<HTMLElement | null>(null);
 let detailTrigger: HTMLElement | null = null;
 let scrollTop = 0;
-const windowHours = ref(props.workspace ? period(route.query.hours) : 720);
+const windowHours = ref(props.workspace ? period(route?.query?.hours) : 720);
 const queryTo = ref(new Date().toISOString());
 let detailRequest = 0;
 onMounted(() => {
   refresh();
-  if (props.workspace && typeof route.query.turn === "string")
-    void inspect(route.query.turn);
+  if (props.workspace && typeof route?.query?.turn === "string")
+    void inspect(route?.query?.turn);
 });
 
 watch(
-  () => route.query.hours,
+  () => route?.query?.hours,
   (value) => {
     if (!props.workspace || windowHours.value === period(value)) return;
     windowHours.value = period(value);
@@ -45,7 +45,7 @@ watch(
 );
 
 watch(
-  () => route.query.turn,
+  () => route?.query?.turn,
   (value, previous) => {
     if (!props.workspace) return;
     if (typeof value === "string") {
@@ -66,8 +66,8 @@ watch(
 
 function changePeriod() {
   if (props.workspace) {
-    void router.replace({
-      query: { ...route.query, hours: String(windowHours.value) },
+    void router?.replace({
+      query: { ...route?.query, hours: String(windowHours.value) },
     });
   }
   refresh();
@@ -78,15 +78,15 @@ function chooseTrace(turnId: string | undefined, event: MouseEvent) {
     detailTrigger =
       event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
     scrollTop = traceResults.value?.scrollTop ?? 0;
-    void router.push({ query: { ...route.query, turn: turnId } });
+    void router?.push({ query: { ...route?.query, turn: turnId } });
   } else {
     void inspect(turnId);
   }
 }
 function closeTrace() {
-  const query = { ...route.query };
+  const query = { ...route?.query };
   delete query.turn;
-  void router.replace({ query });
+  void router?.replace({ query });
 }
 function refresh(): void {
   if (!props.workspace) detailRequest += 1;

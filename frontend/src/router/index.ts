@@ -11,10 +11,6 @@ export const router = createRouter({
       component: OperationsView,
     },
     { path: "/settings", name: "ops-settings", component: OperationsView },
-    {
-      path: "/legacy",
-      name: "command-deck",
-      component: () => import("../views/CommandDeckView.vue"),
-    },
+    { path: "/legacy", redirect: { name: "ops-overview" } },
   ],
 });

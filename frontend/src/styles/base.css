@@ -46,20 +46,6 @@ summary:focus-visible,
   background: var(--accent);
 }
 
-.command-deck {
-  position: relative;
-  width: 100vw;
-  height: 100dvh;
-  overflow: hidden;
-  background: var(--dark);
-  transition: background-color 700ms ease;
-}
-
-.command-deck.is-office-mode {
-  overflow: auto;
-  background: #06131f;
-}
-
 .office-mode-layout {
   display: grid;
   width: 100%;

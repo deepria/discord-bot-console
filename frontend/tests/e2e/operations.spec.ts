@@ -188,3 +188,24 @@ test("settings search keeps runtime values visible and hides editing for a viewe
   await expect(page.getByText("CHAT_WEB_SEARCH", { exact: true })).toBeHidden();
   await expect(page.getByRole("button", { name: "EDIT" })).toHaveCount(0);
 });
+
+test("legacy console entry resolves to Overview without requesting office assets", async ({
+  page,
+}) => {
+  const images: string[] = [];
+  page.on("request", (request) => {
+    if (request.resourceType() === "image") images.push(request.url());
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem("rio-console-mode", "office");
+  });
+  await page.route("**/api/**", (route) => route.fulfill({ json: {} }));
+  await page.goto("/legacy");
+  await expect(page.getByRole("heading", { name: "봇 상태" })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByText(/OFFICE MODE/i)).toHaveCount(0);
+  await page.getByRole("link", { name: "조사", exact: true }).click();
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "봇 상태" })).toBeVisible();
+  expect(images.filter((url) => /wall|ceiling|floor|rio-(neutral|expression)/.test(url))).toEqual([]);
+});

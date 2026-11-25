@@ -26,6 +26,7 @@ const settingsSections = [
   ["runtime", "설정 목록"],
   ["control", "봇 조작"],
   ["recovery", "상태 및 복구"],
+  ["deployment", "배포 상세"],
 ] as const;
 const paletteOpen = ref(false);
 const paletteTrigger = ref<HTMLElement | null>(null);
@@ -41,6 +42,7 @@ const activePanel = computed(() => {
   if (route.name === "ops-settings") {
     if (activeSetting.value === "control") return "control";
     if (activeSetting.value === "recovery") return "system";
+    if (activeSetting.value === "deployment") return "deploy";
   }
   return null;
 });
@@ -120,10 +122,7 @@ function openPanel(id: MonitorId) {
   } else if (id === "system" || id === "link" || id === "runtime") {
     void router.push({ path: "/settings", query: { view: "recovery" } });
   } else if (id === "deploy") {
-    const hash = "#ops-deployments";
-    void router
-      .push({ path: "/", hash })
-      .then(() => document.getElementById(hash.slice(1))?.scrollIntoView());
+    void router.push({ path: "/settings", query: { view: "deployment" } });
   } else {
     void router.push({ path: "/investigate", query: { view: id } });
   }
@@ -331,7 +330,10 @@ function activityLabel(event: string | null) {
           <section class="operations-section" aria-labelledby="ops-deployments">
             <div class="operations-section-header">
               <h2 id="ops-deployments">배포 상태</h2>
-              <p>마지막 정상 갱신 {{ formatKst(store.lastDeploymentsAt) }}</p>
+              <p>
+                마지막 정상 갱신 {{ formatKst(store.lastDeploymentsAt) }} ·
+                <RouterLink :to="{ path: '/settings', query: { view: 'deployment' } }">배포 상세</RouterLink>
+              </p>
             </div>
             <p v-if="store.deploymentsError" role="status" class="ops-notice">
               배포 갱신 실패{{

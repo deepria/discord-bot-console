@@ -119,73 +119,24 @@ async function mockConsole(
   );
 }
 
-async function selectFromControlPanel(page: Page, name: RegExp): Promise<void> {
-  const trigger = page.getByRole("button", { name: "CONTROL PANEL" });
-  // Closing a panel restores focus and already opens this menu.
-  if ((await trigger.getAttribute("aria-expanded")) !== "true")
-    await trigger.click();
-  await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await page.getByRole("button", { name }).click();
-}
-
-async function switchToOfficeMode(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "OFFICE MODE" }).click();
-  await expect(
-    page.getByRole("button", { name: "Rio와 대화하기" }),
-  ).toBeVisible();
-}
-
-function boxesOverlap(
-  first: { x: number; y: number; width: number; height: number },
-  second: { x: number; y: number; width: number; height: number },
-): boolean {
-  return (
-    first.x < second.x + second.width &&
-    first.x + first.width > second.x &&
-    first.y < second.y + second.height &&
-    first.y + first.height > second.y
-  );
-}
-
-test("starts in a practical console mode and preserves office mode", async ({
-  page,
-}) => {
-  await mockConsole(page);
-  await page.goto("/legacy");
-
-  await expect(
-    page.getByRole("heading", { name: "SYSTEM HEALTHY" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Rio와 대화하기" }),
-  ).toBeHidden();
-  await expect(page.locator(".office-scene")).toBeHidden();
-
-  await switchToOfficeMode(page);
-  await page.getByRole("button", { name: "CONSOLE MODE" }).click();
-  await expect(
-    page.getByRole("heading", { name: "SYSTEM HEALTHY" }),
-  ).toBeVisible();
-});
-
 test("shows the authenticated Discord role instead of another login link", async ({
   page,
 }) => {
   await mockConsole(page, healthy, { id: "123456789", role: "admin" });
-  await page.goto("/legacy");
+  await page.goto("/");
 
-  await expect(page.getByText("DISCORD · ADMIN")).toBeVisible();
-  await expect(page.getByRole("button", { name: "LOG OUT" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "DISCORD LOGIN" })).toBeHidden();
+  await expect(page.getByText("관리자")).toBeVisible();
+  await expect(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Discord 로그인" })).toBeHidden();
 });
 
 test("shows an agent-backed read-only runtime settings snapshot", async ({
   page,
 }) => {
   await mockConsole(page);
-  await page.goto("/legacy");
+  await page.goto("/");
 
-  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await page.getByRole("link", { name: "설정", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "RUNTIME SETTINGS" }),
   ).toBeVisible();
@@ -195,250 +146,15 @@ test("shows an agent-backed read-only runtime settings snapshot", async ({
   await expect(page.getByText("DB OVERRIDE", { exact: true })).toBeVisible();
 });
 
-test("keeps office controls readable at tablet and mobile widths", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1024, height: 768 });
-  await mockConsole(page, { ...healthy, online: false, pid: null });
-  await page.goto("/legacy");
-  await switchToOfficeMode(page);
-
-  const actionCard = page.locator(".office-stage .action-card");
-  const dock = page.getByRole("button", { name: "CONTROL PANEL" });
-  const tabletCard = await actionCard.boundingBox();
-  const tabletDock = await dock.boundingBox();
-  if (!tabletCard || !tabletDock)
-    throw new Error("Office controls are hidden.");
-  expect(boxesOverlap(tabletCard, tabletDock)).toBe(false);
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  const mobileCard = await actionCard.boundingBox();
-  const mobileDock = await dock.boundingBox();
-  if (!mobileCard || !mobileDock)
-    throw new Error("Mobile office controls are hidden.");
-  expect(boxesOverlap(mobileCard, mobileDock)).toBe(false);
-  expect(mobileCard.x).toBeGreaterThanOrEqual(0);
-  expect(mobileCard.x + mobileCard.width).toBeLessThanOrEqual(390);
-
-  const rio = page.getByRole("button", { name: "Rio와 대화하기" });
-  const rioBox = await rio.boundingBox();
-  const visualStageBox = await page
-    .locator(".office-visual-stage")
-    .boundingBox();
-  if (!rioBox || !visualStageBox)
-    throw new Error("Rio is not visible in the Office Mode visual stage.");
-  expect(rioBox.x + rioBox.width / 2).toBeCloseTo(195, 0);
-  expect(rioBox.height).toBeCloseTo(visualStageBox.height, 0);
-  expect(rioBox.y).toBeCloseTo(visualStageBox.y, 0);
-});
-
-test("places the Office Mode detail panel below the visual stage", async ({
-  page,
-}) => {
-  await mockConsole(page);
-  await page.goto("/legacy");
-  await switchToOfficeMode(page);
-
-  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
-  const visualStage = page.locator(".office-visual-stage");
-  const panel = page.getByRole("complementary", {
-    name: "OPERATIONS STATUS",
-  });
-  await expect(panel).toHaveClass(/is-inline/);
-  await expect
-    .poll(() =>
-      page.locator(".command-deck").evaluate((node) => node.scrollTop),
-    )
-    .toBe(0);
-  const stageBox = await visualStage.boundingBox();
-  const panelBox = await panel.boundingBox();
-  if (!stageBox || !panelBox) throw new Error("Office layout is not visible.");
-  expect(panelBox.y).toBeGreaterThanOrEqual(stageBox.y + stageBox.height);
-});
-
-test("opens a monitor and shows live operational data", async ({
-  page,
-}, testInfo) => {
-  await mockConsole(page);
-  await page.goto("/legacy");
-  await switchToOfficeMode(page);
-
-  await expect(
-    page.getByRole("button", { name: "Rio와 대화하기" }),
-  ).toBeVisible();
-  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
-  await expect(
-    page.getByRole("heading", { name: "OPERATIONS STATUS" }),
-  ).toBeVisible();
-  await expect(page.getByText("DISCORD / AI", { exact: true })).toBeVisible();
-  await expect(
-    page
-      .getByRole("region", { name: "통합 서비스 상태" })
-      .getByText("DATA LINK", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("101", { exact: true })).toBeVisible();
-  await page.waitForTimeout(400);
-  await page.screenshot({
-    path: testInfo.outputPath(
-      `healthy-system-panel-${testInfo.project.name}.png`,
-    ),
-    fullPage: true,
-  });
-  await page.getByRole("button", { name: "상세 패널 닫기" }).click();
-  await expect(
-    page.getByRole("heading", { name: "OPERATIONS STATUS" }),
-  ).toBeHidden();
-});
-
-test("uses a wider desktop panel for live events and log streams", async ({
-  page,
-}, testInfo) => {
-  await mockConsole(page);
-  await page.goto("/legacy");
-
-  await page.getByRole("button", { name: /LIVE EVENTS: 1 EVENTS/ }).click();
-  const eventsPanel = page.locator("#monitor-panel");
-  await expect(eventsPanel).toHaveClass(/is-wide/);
-  const eventsBox = await eventsPanel.boundingBox();
-  if (testInfo.project.name === "chromium") {
-    expect(eventsBox?.width).toBeGreaterThan(630);
-  } else {
-    expect(eventsBox?.width).toBeLessThanOrEqual(
-      page.viewportSize()?.width ?? 390,
-    );
-  }
-
-  await page.getByRole("button", { name: /LOG STREAM: OPEN/ }).click();
-  await expect(
-    page.getByRole("complementary", { name: "LOG STREAM" }),
-  ).toHaveClass(/is-wide/);
-});
-
-test("opens the lower-left control panel", async ({ page }, testInfo) => {
-  await mockConsole(page);
-  await page.goto("/legacy");
-  await switchToOfficeMode(page);
-
-  const trigger = page.getByRole("button", { name: "CONTROL PANEL" });
-  await trigger.click();
-  await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await expect(
-    page.getByRole("button", { name: /DEPLOY WATCH: HEALTHY/ }),
-  ).toBeVisible();
-  await page.screenshot({
-    path: testInfo.outputPath(`monitor-leader-${testInfo.project.name}.png`),
-    fullPage: true,
-  });
-});
-
-test("opens Rio dialogue and cycles through expressions", async ({
-  page,
-}, testInfo) => {
-  await mockConsole(page);
-  await page.goto("/legacy");
-  await switchToOfficeMode(page);
-
-  const rio = page.getByRole("button", { name: "Rio와 대화하기" });
-  const portrait = rio.locator("img");
-  const firstExpression = await portrait.getAttribute("src");
-
-  await rio.click();
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
-  const dialogue = page.getByRole("dialog", { name: "Rio 대화" });
-  await expect(dialogue).toBeVisible();
-  await expect(
-    dialogue.getByText("문제없어. 시스템은 정상적으로 운영 중이야."),
-  ).toBeVisible();
-
-  await dialogue.getByRole("button", { name: "다음 대화 보기" }).click();
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
-  await expect(portrait).not.toHaveAttribute("src", firstExpression ?? "");
-  await expect(
-    dialogue.getByText(/관제 데이터는 제가 계속 확인/),
-  ).toBeVisible();
-  await page.waitForTimeout(180);
-  await page.screenshot({
-    path: testInfo.outputPath(`rio-dialogue-${testInfo.project.name}.png`),
-    fullPage: true,
-  });
-
-  await dialogue.getByRole("button", { name: "Rio 대화 닫기" }).click();
-  await expect(dialogue).toBeHidden();
-
-  await rio.click();
-  await expect(dialogue).toBeVisible();
-  const stage = page.locator(".office-stage");
-  const box = await stage.boundingBox();
-  if (!box) throw new Error("Office stage is not visible.");
-  await stage.click({ position: { x: box.width - 10, y: box.height - 10 } });
-  await expect(dialogue).toBeHidden();
-});
-
-test("toggles a monitor and dismisses it from the room background", async ({
-  page,
-}) => {
-  await mockConsole(page);
-  await page.goto("/legacy");
-  await switchToOfficeMode(page);
-
-  const heading = page.getByRole("heading", { name: "OPERATIONS STATUS" });
-
-  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
-  await expect(heading).toBeVisible();
-  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
-  await expect(heading).toBeHidden();
-
-  await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
-  await expect(heading).toBeVisible();
-  const stage = page.locator(".office-stage");
-  const box = await stage.boundingBox();
-  if (!box) throw new Error("Office stage is not visible.");
-  await stage.click({ position: { x: box.width - 10, y: box.height - 10 } });
-  await expect(heading).toBeHidden();
-});
-
-test("uses the alert scene when the bot is offline", async ({ page }) => {
-  await mockConsole(page, { ...healthy, online: false, pid: null });
-  await page.goto("/legacy");
-  await switchToOfficeMode(page);
-
-  await expect(page.locator(".command-deck")).toHaveAttribute(
-    "data-scene",
-    "alert",
-  );
-  await page.getByRole("button", { name: "CONTROL PANEL" }).click();
-  await expect(
-    page.getByRole("button", { name: /OPERATIONS STATUS: OFFLINE/ }),
-  ).toBeVisible();
-});
-
-test("guides an offline bot investigation from the action card", async ({
-  page,
-}) => {
-  await mockConsole(page, { ...healthy, online: false, pid: null });
-  await page.goto("/legacy");
-  await switchToOfficeMode(page);
-
-  const card = page.getByText("BOT SERVICE OFFLINE").locator("..");
-  await expect(card).toBeVisible();
-  await expect(
-    page.getByText("Discord 메시지에 응답할 수 없습니다."),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "상세 조사" }).click();
-  await expect(
-    page.getByRole("heading", { name: "OPERATIONS STATUS" }),
-  ).toBeVisible();
-});
-
 test("requires confirmation before stopping the bot", async ({ page }) => {
   await mockConsole(page, healthy, {
     id: "test-admin",
     role: "admin",
   });
-  await page.goto("/legacy");
-  await switchToOfficeMode(page);
+  await page.goto("/");
 
-  await selectFromControlPanel(page, /RIO CONTROL:/);
+  await page.getByRole("link", { name: "설정", exact: true }).click();
+  await page.getByRole("link", { name: "봇 조작", exact: true }).click();
   await page.getByRole("button", { name: /STOP/ }).click();
 
   const dialog = page.getByRole("dialog", { name: "Rio Bot을 중지할까요?" });
@@ -469,7 +185,7 @@ test("opens investigation panels through the keyboard command palette", async ({
     "Mobile browsers do not expose a Cmd/Ctrl keyboard shortcut.",
   );
   await mockConsole(page);
-  await page.goto("/legacy");
+  await page.goto("/");
 
   await expect(
     page.getByRole("button", { name: "명령 팔레트 열기" }),
@@ -520,8 +236,8 @@ test("admin changes Discord Presence and sees the committed value after reload",
       await route.fulfill({ json: snapshot });
     }
   });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await page.goto("/");
+  await page.getByRole("link", { name: "설정", exact: true }).click();
   await expect(page.locator("#presence-status")).toHaveValue("dnd");
   await page.locator("#presence-status").selectOption("online");
   await page.locator("#presence-activity").selectOption("watching");
@@ -536,7 +252,7 @@ test("admin changes Discord Presence and sees the committed value after reload",
   );
   expect(writes).toBe(1);
   await page.reload();
-  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await page.getByRole("link", { name: "설정", exact: true }).click();
   await expect(page.locator("#presence-status")).toHaveValue("online");
   await expect(page.locator("#presence-text")).toHaveValue("서버 상태 확인 중");
 });
@@ -545,8 +261,8 @@ test("presence form rejects whitespace and prevents viewer changes", async ({
   page,
 }) => {
   await mockConsole(page, healthy, { id: "123", role: "admin" });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await page.goto("/");
+  await page.getByRole("link", { name: "설정", exact: true }).click();
   await page.locator("#presence-text").fill("   ");
   await expect(
     page.getByRole("button", { name: "Apply", exact: true }),
@@ -557,7 +273,7 @@ test("presence form rejects whitespace and prevents viewer changes", async ({
     }),
   );
   await page.reload();
-  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await page.getByRole("link", { name: "설정", exact: true }).click();
   await expect(page.locator("#presence-mode")).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "Apply", exact: true }),
@@ -584,13 +300,11 @@ test("public Memory panel shows screening progress after reload and retains stal
         })
       : route.fulfill({ json: memoryEvaluationFixture() });
   });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
+  await page.goto("/investigate?view=memory");
   const panel = page.getByRole("region", { name: "기억 평가 준비 상태" });
   await expect(panel).toContainText("38 / 50건");
   await expect(panel).toContainText("평가 자료 수집 중");
   await page.reload();
-  await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
   await expect(panel).toContainText("38 / 50건");
   fail = true;
   await panel.getByRole("button", { name: "새로고침" }).click();
@@ -644,8 +358,7 @@ test("admin inspects a selected memory candidate and logout clears its content",
     reads++;
     return route.fulfill({ json: detail });
   });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
+  await page.goto("/investigate?view=memory");
   const open = page.getByRole("button", { name: "기억 후보 1 내용 보기" });
   await expect(open).toBeEnabled();
   expect(reads).toBe(0);
@@ -668,7 +381,7 @@ test("admin inspects a selected memory candidate and logout clears its content",
   await expect(
     page.getByText(detail.memory.content, { exact: true }),
   ).toBeVisible();
-  const logout = page.getByRole("button", { name: "LOG OUT", exact: true });
+  const logout = page.getByRole("button", { name: "로그아웃", exact: true });
   await logout.focus();
   await logout.press("Enter");
   await expect(open).toBeDisabled();
@@ -718,8 +431,7 @@ test("memory owner selection separates users and clears the previous body", asyn
   await page.route("**/api/memory/1?**", (route) =>
     route.fulfill({ json: detail }),
   );
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
+  await page.goto("/investigate?view=memory");
   const selector = page.getByRole("combobox", { name: "기억 소유자" });
   await expect(selector).toBeVisible();
   await expect(
@@ -776,8 +488,8 @@ test("shows five distinct recent failures and opens Live Events", async ({
       },
     ],
   });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: /OPERATIONS STATUS: ONLINE/ }).click();
+  await page.goto("/");
+  await page.getByRole("link", { name: "상태 및 복구" }).click();
   const errors = page.getByRole("region", { name: "최근 응답 오류" });
   await errors.scrollIntoViewIfNeeded();
   await expect(errors.locator("li")).toHaveCount(5);
@@ -792,7 +504,7 @@ test("shows five distinct recent failures and opens Live Events", async ({
     animations: "disabled",
     fullPage: true,
   });
-  await errors.getByRole("button", { name: "Live Events 보기" }).click();
+  await errors.getByRole("link", { name: "Live Events 보기" }).click();
   await expect(
     page.getByRole("heading", { name: "LIVE EVENTS" }),
   ).toBeVisible();
@@ -816,8 +528,8 @@ test("public recovery retries status reads and keeps service controls disabled",
   page.on("request", (request) => {
     if (request.method() === "POST") writes++;
   });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: /OPERATIONS STATUS: ONLINE/ }).click();
+  await page.goto("/");
+  await page.getByRole("link", { name: "상태 및 복구" }).click();
   const recovery = page.getByRole("region", { name: "상태 조회 및 복구" });
   await expect(
     recovery.getByRole("button", { name: /RESTART/ }),
@@ -839,7 +551,7 @@ test("public recovery retries status reads and keeps service controls disabled",
   ).toContainText("최신 상태를 다시 조회했습니다");
   expect(writes).toBe(0);
   await page.getByRole("button", { name: "상세 패널 닫기" }).click();
-  await page.getByRole("button", { name: /RIO CONTROL:/ }).click();
+  await page.getByRole("link", { name: "봇 조작" }).click();
   for (const label of [/^START/, /^RESTART/, /^STOP/]) {
     await expect(
       page
@@ -863,8 +575,8 @@ test("admin confirms recovery restart and pending state survives panel changes",
     await gate;
     await route.fulfill({ json: { ok: true } });
   });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: /OPERATIONS STATUS: ONLINE/ }).click();
+  await page.goto("/");
+  await page.getByRole("link", { name: "상태 및 복구" }).click();
   const recovery = page.getByRole("region", { name: "상태 조회 및 복구" });
   await recovery.scrollIntoViewIfNeeded();
   await page.screenshot({
@@ -884,7 +596,7 @@ test("admin confirms recovery restart and pending state survives panel changes",
     recovery.getByRole("button", { name: /RESTART/ }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "상세 패널 닫기" }).click();
-  await page.getByRole("button", { name: /RIO CONTROL:/ }).click();
+  await page.getByRole("link", { name: "봇 조작" }).click();
   const controlPanel = page.getByRole("complementary", {
     name: "RIO CONTROL",
     exact: true,
@@ -911,8 +623,8 @@ test("settings confirmations have unique accessible labels", async ({
   page,
 }, testInfo) => {
   await mockConsole(page, healthy, { id: "42", role: "admin" });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await page.goto("/");
+  await page.getByRole("link", { name: "설정", exact: true }).click();
   const labels = await page.locator("dialog").evaluateAll((dialogs) =>
     dialogs.map((dialog) => {
       const id = dialog.getAttribute("aria-labelledby");
@@ -971,54 +683,18 @@ test("settings confirmations have unique accessible labels", async ({
   expect(writes).toBe(0);
 });
 
-test("keyboard panel close restores the console navigation trigger", async ({
-  page,
-}) => {
-  await mockConsole(page);
-  await page.goto("/legacy");
-  const trigger = page.getByRole("button", {
-    name: /OPERATIONS STATUS: ONLINE/,
-  });
-  await trigger.focus();
-  await page.keyboard.press("Enter");
-  const panel = page.getByRole("complementary", {
-    name: "OPERATIONS STATUS",
-    exact: true,
-  });
-  await expect(panel).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(panel).toBeHidden();
-  await expect(trigger).toBeFocused();
-});
-
-test("keyboard settings open and close preserve focus", async ({ page }) => {
-  await mockConsole(page);
-  await page.goto("/legacy");
-  const trigger = page.getByRole("button", { name: "SETTINGS", exact: true });
-  await trigger.focus();
-  await page.keyboard.press("Enter");
-  const settings = page.getByRole("complementary", {
-    name: "RUNTIME SETTINGS",
-    exact: true,
-  });
-  await expect(settings).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(settings).toBeHidden();
-  await expect(trigger).toBeFocused();
-});
-
 test("palette keyboard isolation and selection preserve the destination focus", async ({
   page,
 }) => {
   await mockConsole(page);
-  await page.goto("/legacy");
+  await page.goto("/");
   const trigger = page.getByRole("button", { name: "명령 팔레트 열기" });
   await trigger.focus();
   await page.keyboard.press("Enter");
   const palette = page.getByRole("dialog", { name: "명령 팔레트" });
   const search = palette.getByRole("searchbox", { name: "명령 검색" });
   await expect(search).toBeFocused();
-  await expect(page.locator(".command-deck")).toHaveAttribute("inert", "");
+  await expect(page.locator(".operations")).toHaveAttribute("inert", "");
   await palette.getByRole("button").last().focus();
   await page.keyboard.press("Tab");
   await expect(search).toBeFocused();
@@ -1028,7 +704,7 @@ test("palette keyboard isolation and selection preserve the destination focus", 
   await page.keyboard.press("Escape");
   await expect(palette).toBeHidden();
   await expect(trigger).toBeFocused();
-  await expect(page.locator(".command-deck")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".operations")).not.toHaveAttribute("inert", "");
   await page.keyboard.press("Enter");
   await search.fill("기억");
   await expect(
@@ -1044,7 +720,7 @@ test("palette keyboard isolation and selection preserve the destination focus", 
   await expect(panel).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(
-    page.getByRole("button", { name: /LOG STREAM: OPEN/ }),
+    page.getByRole("link", { name: "개요", exact: true }),
   ).toBeFocused();
 });
 
@@ -1053,9 +729,9 @@ test("keyboard focus indicators and reduced motion remain visible", async ({
 }) => {
   await mockConsole(page, healthy, { id: "42", role: "admin" });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/legacy");
-  const trigger = page.getByRole("button", {
-    name: /OPERATIONS STATUS: ONLINE/,
+  await page.goto("/");
+  const trigger = page.getByRole("link", {
+    name: "상태 및 복구",
   });
   await page.keyboard.press("Tab");
   await trigger.focus();
@@ -1067,10 +743,10 @@ test("keyboard focus indicators and reduced motion remain visible", async ({
   expect(indicator.width).toBeGreaterThanOrEqual(2);
   expect(indicator.style).not.toBe("none");
   const duration = await page
-    .locator(".command-deck")
+    .locator(".operations")
     .evaluate((node) => parseFloat(getComputedStyle(node).transitionDuration));
   expect(duration).toBeLessThan(0.01);
-  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await page.getByRole("link", { name: "설정", exact: true }).click();
   const field = page.locator("#presence-mode");
   await field.focus();
   await expect(field).toBeFocused();
@@ -1078,92 +754,6 @@ test("keyboard focus indicators and reduced motion remain visible", async ({
     () => getComputedStyle(document.activeElement!).outlineStyle,
   );
   expect(formIndicator).not.toBe("none");
-});
-
-test("normal and alert theme text tokens meet minimum contrast on fixed surfaces", async ({
-  page,
-}, testInfo) => {
-  type Color = [number, number, number, number];
-  const parse = (value: string): Color => {
-    if (value.startsWith("#"))
-      return [
-        parseInt(value.slice(1, 3), 16),
-        parseInt(value.slice(3, 5), 16),
-        parseInt(value.slice(5, 7), 16),
-        1,
-      ];
-    const numbers = value.match(/[\d.]+/g)!.map(Number);
-    return [numbers[0]!, numbers[1]!, numbers[2]!, numbers[3] ?? 1];
-  };
-  const over = (front: Color, back: Color): Color =>
-    [0, 1, 2]
-      .map((i) => front[i]! * front[3] + back[i]! * (1 - front[3]))
-      .concat(1) as Color;
-  const luminance = (c: Color) =>
-    c
-      .slice(0, 3)
-      .map((v) => {
-        const x = v / 255;
-        return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
-      })
-      .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i]!, 0);
-  const samples: {
-    theme: string;
-    text: string;
-    surface: string;
-    ratio: number;
-  }[] = [];
-  for (const theme of ["healthy", "alert"]) {
-    await mockConsole(page, { ...healthy, online: theme === "healthy" });
-    await page.goto("/legacy");
-    const deck = page.locator(".command-deck");
-    await expect(deck).toHaveAttribute("data-scene", theme);
-    const tokens = await deck.evaluate((node) => {
-      const style = getComputedStyle(node);
-      return Object.fromEntries(
-        [
-          "--ink",
-          "--muted",
-          "--accent",
-          "--attention",
-          "--danger",
-          "--dark",
-          "--surface",
-          "--surface-strong",
-        ].map((key) => [key, style.getPropertyValue(key).trim()]),
-      );
-    });
-    const dark = parse(tokens["--dark"]!);
-    const accent = parse(tokens["--accent"]!);
-    const surfaces: Record<string, Color> = {
-      dark,
-      surface: over(parse(tokens["--surface"]!), dark),
-      strong: over(parse(tokens["--surface-strong"]!), dark),
-      panel: [3, 15, 27, 1],
-      panelTint: over([accent[0], accent[1], accent[2], 0.11], [3, 15, 27, 1]),
-      confirmation: [24, 10, 33, 1],
-    };
-    for (const text of [
-      "--ink",
-      "--muted",
-      "--accent",
-      "--attention",
-      "--danger",
-    ])
-      for (const [surface, bg] of Object.entries(surfaces)) {
-        const a = luminance(parse(tokens[text]!));
-        const b = luminance(bg);
-        const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-        samples.push({ theme, text, surface, ratio });
-        expect(ratio, `${theme} ${text} on ${surface}`).toBeGreaterThanOrEqual(
-          4.5,
-        );
-      }
-  }
-  await testInfo.attach("fixed-surface-contrast", {
-    body: JSON.stringify(samples, null, 2),
-    contentType: "application/json",
-  });
 });
 
 test("confirmation returns focus to the panel while its source is disabled", async ({
@@ -1183,8 +773,8 @@ test("confirmation returns focus to the panel while its source is disabled", asy
       });
     } else await route.fulfill({ json: presenceFixture() });
   });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
+  await page.goto("/");
+  await page.getByRole("link", { name: "설정", exact: true }).click();
   const settings = page.getByRole("complementary", {
     name: "RUNTIME SETTINGS",
     exact: true,
@@ -1236,8 +826,7 @@ test("retained Usage shows coverage limits and requests 90 days", async ({
       },
     });
   });
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: /^USAGE ANALYTICS:/ }).click();
+  await page.goto("/investigate?view=usage");
   const panel = page.getByRole("complementary", {
     name: "USAGE ANALYTICS",
     exact: true,
@@ -1278,8 +867,7 @@ test("Trace legacy tail is never displayed as a complete retained period", async
       },
     }),
   );
-  await page.goto("/legacy");
-  await page.getByRole("button", { name: /^TURN TRACES:/ }).click();
+  await page.goto("/investigate");
   const panel = page.getByRole("complementary", {
     name: "TURN TRACES",
     exact: true,

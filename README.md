@@ -1,6 +1,6 @@
 # Rio Command Deck
 
-Rio Command Deck is the operations console for the Rio Discord Bot. The FastAPI service proxies the control agent while a Vue 3 application renders the interactive office scene.
+Rio Command Deck is the operations console for the Rio Discord Bot. The FastAPI service proxies the control agent while a Vue 3 application provides the Overview, Investigation, and Settings workspaces.
 
 ## Architecture
 
@@ -58,7 +58,7 @@ Chromium and mobile WebKit tests cover these flows and reduced motion. The text
 color tokens are checked at 4.5:1 against fixed surfaces in normal/alert themes,
 using the [WCAG contrast formula](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum).
 This is a bounded browser check, not a complete WCAG certification or a substitute
-for testing actual screen-reader speech and every Office scene image/background.
+for testing actual screen-reader speech.
 
 ## Local development
 

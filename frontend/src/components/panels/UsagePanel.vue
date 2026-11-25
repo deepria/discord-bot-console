@@ -1,17 +1,58 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useOperationsStore } from "../../stores/operations";
 import TelemetryCoverage from "./TelemetryCoverage.vue";
 import { formatKst } from "../../utils/format";
+const props = defineProps<{ workspace?: boolean }>();
+const route = useRoute();
+const router = useRouter();
 const store = useOperationsStore();
 const { usage, usageError, usageLoading } = storeToRefs(store);
-const windowHours = ref(24);
-const groupBy = ref<"provider" | "model">("provider");
+function filterHours(value: unknown): number {
+  return value === "168"
+    ? 168
+    : value === "720"
+      ? 720
+      : value === "2160"
+        ? 2160
+        : 24;
+}
+const windowHours = ref(props.workspace ? filterHours(route.query.hours) : 24);
+const groupBy = ref<"provider" | "model">(
+  props.workspace && route.query.group === "model" ? "model" : "provider",
+);
 onMounted(() => void store.refreshUsage(windowHours.value, groupBy.value));
 function refresh(): void {
   void store.refreshUsage(windowHours.value, groupBy.value);
 }
+watch(
+  () => [route.query.hours, route.query.group],
+  ([hours, group]) => {
+    if (!props.workspace || route.query.view !== "usage") return;
+    const nextHours = filterHours(hours);
+    const nextGroup = group === "model" ? "model" : "provider";
+    if (nextHours === windowHours.value && nextGroup === groupBy.value) return;
+    windowHours.value = nextHours;
+    groupBy.value = nextGroup;
+    refresh();
+  },
+);
+
+function changeFilters() {
+  if (props.workspace) {
+    void router.replace({
+      query: {
+        ...route.query,
+        hours: String(windowHours.value),
+        group: groupBy.value,
+      },
+    });
+  }
+  refresh();
+}
+
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
@@ -21,7 +62,7 @@ function percent(value: number): string {
     <div class="usage-controls">
       <label
         >PERIOD
-        <select v-model.number="windowHours" @change="refresh">
+        <select v-model.number="windowHours" @change="changeFilters">
           <option :value="24">24 HOURS</option>
           <option :value="168">7 DAYS</option>
           <option :value="720">30 DAYS</option>
@@ -29,7 +70,7 @@ function percent(value: number): string {
         </select></label
       ><label
         >GROUP
-        <select v-model="groupBy" @change="refresh">
+        <select v-model="groupBy" @change="changeFilters">
           <option value="provider">PROVIDER</option>
           <option value="model">MODEL</option>
         </select></label

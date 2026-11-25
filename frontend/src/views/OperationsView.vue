@@ -1,16 +1,50 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import CommandPalette from "../components/command/CommandPalette.vue";
+import MonitorPanel from "../components/panels/MonitorPanel.vue";
+import SettingsPanel from "../components/panels/SettingsPanel.vue";
 import StatusBadge from "../components/common/StatusBadge.vue";
 import { usePolling } from "../composables/usePolling";
 import { recentTurnErrors } from "../domain/recentErrors";
 import { api } from "../services/api";
 import { useOperationsStore } from "../stores/operations";
-import type { ConsoleActor, UsageResponse } from "../types/api";
+import type { ConsoleActor, MonitorId, UsageResponse } from "../types/api";
 import { formatKst } from "../utils/format";
 import "../styles/operations.css";
 
 const route = useRoute();
+const router = useRouter();
+const investigation = [
+  ["traces", "Trace"],
+  ["events", "이벤트"],
+  ["logs", "로그"],
+  ["usage", "사용량"],
+  ["memory", "기억"],
+] as const;
+const settingsSections = [
+  ["runtime", "설정 목록"],
+  ["control", "봇 조작"],
+  ["recovery", "상태 및 복구"],
+] as const;
+const paletteOpen = ref(false);
+const paletteTrigger = ref<HTMLElement | null>(null);
+const activeInvestigation = computed(
+  () => investigation.find(([id]) => id === route.query.view)?.[0] ?? "traces",
+);
+const activeSetting = computed(
+  () =>
+    settingsSections.find(([id]) => id === route.query.view)?.[0] ?? "runtime",
+);
+const activePanel = computed(() => {
+  if (route.name === "ops-investigate") return activeInvestigation.value;
+  if (route.name === "ops-settings") {
+    if (activeSetting.value === "control") return "control";
+    if (activeSetting.value === "recovery") return "system";
+  }
+  return null;
+});
+const canManage = computed(() => authActor.value?.role === "admin");
 const store = useOperationsStore();
 const usage = ref<UsageResponse | null>(null);
 const usageError = ref(false);
@@ -48,6 +82,7 @@ const usageTotals = computed(() =>
   ),
 );
 
+watch(activePanel, (panel) => store.selectMonitor(panel), { immediate: true });
 usePolling(() => store.refreshStatus(), 5000);
 usePolling(() => store.refreshDeployments(), 10000);
 usePolling(async () => {
@@ -71,12 +106,68 @@ async function refreshAuth() {
 }
 
 async function logout() {
-  await api.logout();
-  authActor.value = null;
-  await refreshAuth();
+  try {
+    await api.logout();
+  } finally {
+    authActor.value = null;
+    await refreshAuth();
+  }
 }
 
-onMounted(() => void refreshAuth());
+function openPanel(id: MonitorId) {
+  if (id === "control") {
+    void router.push({ path: "/settings", query: { view: "control" } });
+  } else if (id === "system" || id === "link" || id === "runtime") {
+    void router.push({ path: "/settings", query: { view: "recovery" } });
+  } else if (id === "deploy") {
+    const hash = "#ops-deployments";
+    void router
+      .push({ path: "/", hash })
+      .then(() => document.getElementById(hash.slice(1))?.scrollIntoView());
+  } else {
+    void router.push({ path: "/investigate", query: { view: id } });
+  }
+}
+
+async function closePanel() {
+  const path = route.name === "ops-settings" ? "/settings" : "/";
+  await router.push(path);
+  await nextTick();
+  document
+    .querySelector<HTMLElement>(
+      path === "/"
+        ? '.operations-header nav a[href="/"]'
+        : '.operations-secondary a[aria-current="page"]',
+    )
+    ?.focus({ preventScroll: true });
+}
+
+function closePalette(restore = true) {
+  paletteOpen.value = false;
+  if (restore) void nextTick(() => paletteTrigger.value?.focus());
+}
+
+function handleShortcut(event: KeyboardEvent) {
+  if (
+    !event.defaultPrevented &&
+    (event.metaKey || event.ctrlKey) &&
+    event.key.toLowerCase() === "k" &&
+    !document.querySelector("dialog[open]")
+  ) {
+    event.preventDefault();
+    if (paletteOpen.value) closePalette();
+    else paletteOpen.value = true;
+  }
+}
+
+onMounted(() => {
+  void refreshAuth();
+  window.addEventListener("keydown", handleShortcut);
+});
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleShortcut);
+  store.selectMonitor(null);
+});
 
 function activityLabel(event: string | null) {
   if (event === "turn.completed") return "응답 완료";
@@ -86,7 +177,7 @@ function activityLabel(event: string | null) {
 </script>
 
 <template>
-  <div class="operations">
+  <div class="operations" :inert="paletteOpen">
     <header class="operations-header">
       <RouterLink class="operations-brand" to="/">Rio 운영 콘솔</RouterLink>
       <nav aria-label="주 메뉴">
@@ -95,6 +186,14 @@ function activityLabel(event: string | null) {
         <RouterLink to="/settings">설정</RouterLink>
       </nav>
       <div class="operations-account">
+        <button
+          ref="paletteTrigger"
+          type="button"
+          aria-label="명령 팔레트 열기"
+          @click="paletteOpen = true"
+        >
+          명령 검색
+        </button>
         <a v-if="oauthEnabled && !authActor" href="/auth/discord/login">
           Discord 로그인
         </a>
@@ -109,7 +208,12 @@ function activityLabel(event: string | null) {
       <section class="operations-section" aria-labelledby="ops-status">
         <div class="operations-section-header">
           <h1 id="ops-status">봇 상태</h1>
-          <p>마지막 정상 갱신 {{ formatKst(store.lastStatusAt) }}</p>
+          <p>
+            마지막 정상 갱신 {{ formatKst(store.lastStatusAt) }} ·
+            <RouterLink :to="{ path: '/settings', query: { view: 'recovery' } }"
+              >상태 및 복구</RouterLink
+            >
+          </p>
         </div>
         <p v-if="store.statusError" role="status" class="ops-notice">
           상태 갱신 실패{{ store.status ? " · 마지막 확인값 표시" : "" }}
@@ -181,7 +285,18 @@ function activityLabel(event: string | null) {
               <tbody>
                 <tr v-for="(item, index) in failures" :key="index">
                   <td>{{ formatKst(item.at) }}</td>
-                  <td>{{ item.diagnosis }}</td>
+                  <td>
+                    {{ item.diagnosis }}
+                    <RouterLink
+                      v-if="item.turnId"
+                      :to="{
+                        path: '/investigate',
+                        query: { turn: item.turnId },
+                      }"
+                      :aria-label="`Trace 열기 · ${formatKst(item.at)}`"
+                      >Trace</RouterLink
+                    >
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -298,9 +413,68 @@ function activityLabel(event: string | null) {
         </div>
       </div>
     </main>
-    <main v-else class="operations-main">
-      <h1>{{ route.name === "ops-investigate" ? "조사" : "설정" }}</h1>
-      <RouterLink to="/legacy">기존 운영 화면 열기</RouterLink>
+    <main v-else-if="route.name === 'ops-investigate'" class="operations-main">
+      <h1>조사</h1>
+      <nav class="operations-secondary" aria-label="조사 데이터">
+        <RouterLink
+          v-for="[id, label] in investigation"
+          :key="id"
+          :to="{
+            path: '/investigate',
+            query: id === 'traces' ? {} : { view: id },
+          }"
+          :aria-current="activeInvestigation === id ? 'page' : undefined"
+          aria-current-value="false"
+          >{{ label }}</RouterLink
+        >
+      </nav>
+      <MonitorPanel
+        v-if="activePanel"
+        :key="activePanel"
+        inline
+        workspace
+        :can-manage="canManage"
+        :can-read-memory-content="canManage"
+        :current-actor-id="authActor?.id"
+        @close="closePanel"
+      />
     </main>
+
+    <main v-else class="operations-main">
+      <h1>설정</h1>
+      <nav class="operations-secondary" aria-label="설정 종류">
+        <RouterLink
+          v-for="[id, label] in settingsSections"
+          :key="id"
+          :to="{
+            path: '/settings',
+            query: id === 'runtime' ? {} : { view: id },
+          }"
+          :aria-current="id === activeSetting ? 'page' : undefined"
+          aria-current-value="false"
+          >{{ label }}</RouterLink
+        >
+      </nav>
+      <MonitorPanel
+        v-if="activePanel"
+        :key="activePanel"
+        inline
+        workspace
+        :can-manage="canManage"
+        @close="closePanel"
+      />
+      <SettingsPanel
+        v-else
+        workspace
+        :can-manage-presence="canManage"
+        @close="closePanel"
+      />
+    </main>
+    <CommandPalette
+      :open="paletteOpen"
+      @close="closePalette"
+      @select="openPanel"
+      @settings="router.push('/settings')"
+    />
   </div>
 </template>

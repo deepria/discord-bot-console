@@ -4,6 +4,7 @@ import { formatEventDiagnosis } from "../utils/format";
 export interface RecentError {
   at: string | null;
   diagnosis: string;
+  turnId?: string;
 }
 
 // Runtime emits both names for the same failure; one turn is one error.
@@ -44,6 +45,10 @@ export function recentTurnErrors(events: RuntimeEvent[]): RecentError[] {
       return {
         at: event.at && Number.isFinite(Date.parse(event.at)) ? event.at : null,
         diagnosis: formatEventDiagnosis(safe) ?? "TURN FAILED",
+        ...(typeof event.turn_id === "string" &&
+        /^[A-Za-z0-9_-]{1,100}$/.test(event.turn_id)
+          ? { turnId: event.turn_id }
+          : {}),
       };
     });
 }

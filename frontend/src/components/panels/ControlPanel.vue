@@ -4,7 +4,7 @@ import { useOperationsStore } from "../../stores/operations";
 import { formatKst } from "../../utils/format";
 import BotControlActions from "../command/BotControlActions.vue";
 import OperationsHistory from "../command/OperationsHistory.vue";
-defineProps<{ canManage?: boolean }>();
+defineProps<{ canManage?: boolean; workspace?: boolean }>();
 const store = useOperationsStore();
 const { operationsHistory, persistentOperations, persistentOperationsError } =
   storeToRefs(store);

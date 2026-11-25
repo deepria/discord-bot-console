@@ -14,6 +14,7 @@ import MemoryPanel from "./MemoryPanel.vue";
 
 defineProps<{
   inline?: boolean;
+  workspace?: boolean;
   canManage?: boolean;
   canReadMemoryContent?: boolean;
   currentActorId?: string;
@@ -89,8 +90,11 @@ onMounted(() => panel.value?.focus({ preventScroll: true }));
           ? { canReadContent: canReadMemoryContent, currentActorId }
           : selectedMonitor &&
               ['system', 'link', 'runtime', 'control'].includes(selectedMonitor)
-            ? { canManage }
-            : {}
+            ? { canManage, workspace }
+            : selectedMonitor &&
+                ['traces', 'logs', 'usage'].includes(selectedMonitor)
+              ? { workspace }
+              : {}
       "
     />
   </aside>

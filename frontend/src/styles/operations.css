@@ -123,6 +123,11 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+.operations-status dd small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--ops-muted);
+}
 .operations-section table {
   width: 100%;
   border-collapse: collapse;

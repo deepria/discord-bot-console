@@ -24,8 +24,10 @@ function period(value: unknown) {
 
 const detailRegion = ref<HTMLElement | null>(null);
 const traceResults = ref<HTMLElement | null>(null);
+const traceWorkspace = ref<HTMLElement | null>(null);
 let detailTrigger: HTMLElement | null = null;
-let scrollTop = 0;
+let returnToList: { hours: number; scrollTop: number; pageTop: number } | null =
+  null;
 const windowHours = ref(props.workspace ? period(route?.query?.hours) : 720);
 const queryTo = ref(new Date().toISOString());
 let detailRequest = 0;
@@ -53,9 +55,14 @@ watch(
     } else {
       detailRequest += 1;
       selectedTurnId.value = null;
+      const position = returnToList;
+      returnToList = null;
       if (previous)
         void nextTick(() => {
-          if (traceResults.value) traceResults.value.scrollTop = scrollTop;
+          if (position && traceWorkspace.value) {
+            traceWorkspace.value.scrollTop = position.scrollTop;
+            window.scrollTo(0, position.pageTop);
+          }
           if (detailTrigger?.isConnected)
             detailTrigger.focus({ preventScroll: true });
           else traceResults.value?.focus({ preventScroll: true });
@@ -77,13 +84,26 @@ function chooseTrace(turnId: string | undefined, event: MouseEvent) {
   if (props.workspace) {
     detailTrigger =
       event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-    scrollTop = traceResults.value?.scrollTop ?? 0;
-    void router?.push({ query: { ...route?.query, turn: turnId } });
+    const destination = { query: { ...route?.query, turn: turnId } };
+    if (selectedTurnId.value) {
+      void router?.replace(destination);
+    } else {
+      returnToList = {
+        hours: windowHours.value,
+        scrollTop: traceWorkspace.value?.scrollTop ?? 0,
+        pageTop: window.scrollY,
+      };
+      void router?.push(destination);
+    }
   } else {
     void inspect(turnId);
   }
 }
 function closeTrace() {
+  if (returnToList?.hours === windowHours.value) {
+    router?.back();
+    return;
+  }
   const query = { ...route?.query };
   delete query.turn;
   void router?.replace({ query });
@@ -135,6 +155,7 @@ async function inspect(turnId: string | undefined): Promise<void> {
 
 <template>
   <div
+    ref="traceWorkspace"
     class="panel-content stack trace-panel"
     :class="{ 'trace-workspace': workspace }"
   >

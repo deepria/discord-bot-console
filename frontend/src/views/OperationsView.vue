@@ -63,6 +63,17 @@ const activity = computed(() =>
     .slice(-3)
     .reverse(),
 );
+const latestResponse = computed(() => {
+  const responses = (store.status?.events ?? []).filter((item) =>
+    ["turn.completed", "turn.failed", "turn_completed", "turn_failed"].includes(
+      item.event ?? "",
+    ),
+  );
+  return responses.sort(
+    (left, right) =>
+      (Date.parse(right.at ?? "") || 0) - (Date.parse(left.at ?? "") || 0),
+  )[0];
+});
 const deploymentRows = computed(() => {
   const result = new Map(
     (store.deployments?.deployments ?? [])
@@ -245,7 +256,27 @@ function activityLabel(event: string | null) {
           </div>
           <div>
             <dt>응답</dt>
-            <dd>{{ store.status?.runtime?.model ?? "미수집" }}</dd>
+            <dd>
+              <StatusBadge
+                :label="
+                  latestResponse
+                    ? latestResponse.event?.endsWith('failed')
+                      ? '최근 실패'
+                      : '최근 성공'
+                    : '미수집'
+                "
+                :severity="
+                  latestResponse
+                    ? latestResponse.event?.endsWith('failed')
+                      ? 'alert'
+                      : 'normal'
+                    : 'attention'
+                "
+              />
+              <small v-if="store.status?.runtime?.model">{{
+                store.status.runtime.model
+              }}</small>
+            </dd>
           </div>
           <div>
             <dt>운영 버전</dt>

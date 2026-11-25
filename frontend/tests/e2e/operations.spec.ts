@@ -49,6 +49,11 @@ test("overview keeps essential status visible and makes only summary requests", 
   const menu = page.getByRole("navigation", { name: "주 메뉴" });
   await expect(menu.getByRole("link")).toHaveText(["개요", "조사", "설정"]);
   await expect(page.getByText("지연 40 ms")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "봇 상태" })
+      .getByText("최근 실패", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("배포 갱신 실패")).toBeVisible();
   await expect(page.getByText("요청 0건 · 오류 0건")).toBeVisible();
 

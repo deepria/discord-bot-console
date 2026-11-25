@@ -17,15 +17,3 @@
     "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
-
-[data-scene="alert"] {
-  --accent: #f078ff;
-  --accent-rgb: 240, 120, 255;
-  --signal: #ffb8f8;
-  --ink: #fff3ff;
-  --muted: #d8b8dd;
-  --dark: #170820;
-  --surface: rgba(31, 10, 39, 0.93);
-  --surface-strong: rgba(22, 6, 31, 0.98);
-  --line: rgba(246, 137, 255, 0.39);
-}

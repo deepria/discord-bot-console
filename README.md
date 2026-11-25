@@ -16,49 +16,30 @@ The production container builds the frontend in a Node stage and copies only `fr
 
 ## Interaction
 
-- Select one of the five room monitors to open its operations panel. Select the
-  same monitor again, press Escape, use the close button, or select the room
-  background to close it.
-- **Operations Status** unifies System Status, Discord / AI, and Data Link in
-  one overview. It shows the current aggregate state, each area's key metrics,
-  the data-flow path, and the last verified response. Use Live Events, Log
-  Stream, and Rio Control for their respective detailed workflows.
-  Recent Errors shows up to five response failures from the latest received
-  event window, newest first. Legacy `turn_failed` and `turn.failed` events
-  with the same turn ID count once. It displays safe error metadata, not
-  conversation bodies or provider error messages. Unavailable/stale events
-  are distinguished from a successfully checked window with no failures;
-  historical failures do not change the current connection-health summary.
-- **Status / Recovery** in Operations Status retries the existing status read
-  for all visitors and exposes the existing service restart to Discord admins
-  after confirmation. Rio Control uses the same controls and permission state.
-  The shared pending state stays locked through post-checks, including when
-  switching panels. Post-checks require a fresh successful status read after
-  the command; cached ONLINE is not accepted after a read failure. This checks
-  service state, not Discord gateway readiness. Status retry does not execute
-  a synchronization job or reconnect Discord. The current architecture has no
-  separate synchronization/reconnect command, so those actions are not offered.
-- Select Rio to open the game-style dialogue window. Repeatedly select Rio or
-  the dialogue body to advance through the portrait expressions and messages.
-- The official in-game portrait sources and redistribution note are documented
-  in `frontend/src/assets/rio/SOURCES.md`.
+- **Overview** (`/`) shows bot and Discord status, the verified deployment
+  revision, recent activity, usage totals and the five newest distinct failures
+  from the received event window. Failure rows with a turn ID open that Trace.
+  Missing, stale or limited data is labeled beside the relevant section.
+- **Investigation** (`/investigate`) opens Trace by default. The Events, Logs,
+  Usage and Memory tabs use the existing Agent routes. A Trace detail opens beside
+  its list on desktop and fills the view on mobile. Trace and Usage filters use
+  shareable URLs. Memory bodies require the server-authorized administrator and
+  load only when an item is opened.
+- **Settings** (`/settings`) groups runtime values, source labels, search, audit
+  history, policy settings and Discord Presence. Service controls and detailed
+  deployment checks are in the same workspace. State-changing actions require the
+  Discord administrator role and the existing server authorization.
+- **Status and Recovery** retries a state read for visitors. Administrators can
+  confirm a restart. Pending state is shared across controls until a fresh
+  service status check finishes. Discord gateway health appears separately.
 
 ## Keyboard accessibility
 
-Panels and Settings receive focus when opened and return it to the launching
-control when closed; if submission disables that control, focus returns to its
-panel. The command palette keeps focus inside, makes the background
-inert, includes Memory Index, and passes focus to the selected panel. Confirmation
-dialogs use unique title/description IDs, focus Cancel first, and cycle Tab in both
-directions. Cmd/Ctrl+K does not open another overlay over an active confirmation.
-Service command results use a named live status region; inputs, links, selectors,
-and navigation keep visible focus indicators.
-
-Chromium and mobile WebKit tests cover these flows and reduced motion. The text
-color tokens are checked at 4.5:1 against fixed surfaces in normal/alert themes,
-using the [WCAG contrast formula](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum).
-This is a bounded browser check, not a complete WCAG certification or a substitute
-for testing actual screen-reader speech.
+Cmd/Ctrl+K opens the command palette. Tab stays inside an open palette or
+confirmation dialog. Escape closes a Trace detail and restores focus to the
+selected row when available. Confirmation dialogs use unique titles and put focus
+on Cancel first. Chromium and mobile WebKit tests cover navigation, focus, and
+reduced motion.
 
 ## Local development
 

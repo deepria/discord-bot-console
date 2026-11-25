@@ -332,7 +332,10 @@ function activityLabel(event: string | null) {
               <h2 id="ops-deployments">배포 상태</h2>
               <p>
                 마지막 정상 갱신 {{ formatKst(store.lastDeploymentsAt) }} ·
-                <RouterLink :to="{ path: '/settings', query: { view: 'deployment' } }">배포 상세</RouterLink>
+                <RouterLink
+                  :to="{ path: '/settings', query: { view: 'deployment' } }"
+                  >배포 상세</RouterLink
+                >
               </p>
             </div>
             <p v-if="store.deploymentsError" role="status" class="ops-notice">

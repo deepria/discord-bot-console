@@ -60,6 +60,7 @@ test("overview keeps essential status visible and makes only summary requests", 
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
+  await expect(page.locator("body")).not.toHaveCSS("overflow-y", "hidden");
   expect([...requests].sort()).toEqual([
     "/api/analytics/usage",
     "/api/auth/me",
@@ -207,5 +208,9 @@ test("legacy console entry resolves to Overview without requesting office assets
   await page.getByRole("link", { name: "조사", exact: true }).click();
   await page.goBack();
   await expect(page.getByRole("heading", { name: "봇 상태" })).toBeVisible();
-  expect(images.filter((url) => /wall|ceiling|floor|rio-(neutral|expression)/.test(url))).toEqual([]);
+  expect(
+    images.filter((url) =>
+      /wall|ceiling|floor|rio-(neutral|expression)/.test(url),
+    ),
+  ).toEqual([]);
 });

@@ -151,7 +151,7 @@ test("starts in a practical console mode and preserves office mode", async ({
   page,
 }) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
 
   await expect(
     page.getByRole("heading", { name: "SYSTEM HEALTHY" }),
@@ -172,7 +172,7 @@ test("shows the authenticated Discord role instead of another login link", async
   page,
 }) => {
   await mockConsole(page, healthy, { id: "123456789", role: "admin" });
-  await page.goto("/");
+  await page.goto("/legacy");
 
   await expect(page.getByText("DISCORD · ADMIN")).toBeVisible();
   await expect(page.getByRole("button", { name: "LOG OUT" })).toBeVisible();
@@ -183,7 +183,7 @@ test("shows an agent-backed read-only runtime settings snapshot", async ({
   page,
 }) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
 
   await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
   await expect(
@@ -200,7 +200,7 @@ test("keeps office controls readable at tablet and mobile widths", async ({
 }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await mockConsole(page, { ...healthy, online: false, pid: null });
-  await page.goto("/");
+  await page.goto("/legacy");
   await switchToOfficeMode(page);
 
   const actionCard = page.locator(".office-stage .action-card");
@@ -236,7 +236,7 @@ test("places the Office Mode detail panel below the visual stage", async ({
   page,
 }) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
   await switchToOfficeMode(page);
 
   await selectFromControlPanel(page, /OPERATIONS STATUS: ONLINE/);
@@ -260,7 +260,7 @@ test("opens a monitor and shows live operational data", async ({
   page,
 }, testInfo) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
   await switchToOfficeMode(page);
 
   await expect(
@@ -294,7 +294,7 @@ test("uses a wider desktop panel for live events and log streams", async ({
   page,
 }, testInfo) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
 
   await page.getByRole("button", { name: /LIVE EVENTS: 1 EVENTS/ }).click();
   const eventsPanel = page.locator("#monitor-panel");
@@ -316,7 +316,7 @@ test("uses a wider desktop panel for live events and log streams", async ({
 
 test("opens the lower-left control panel", async ({ page }, testInfo) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
   await switchToOfficeMode(page);
 
   const trigger = page.getByRole("button", { name: "CONTROL PANEL" });
@@ -335,7 +335,7 @@ test("opens Rio dialogue and cycles through expressions", async ({
   page,
 }, testInfo) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
   await switchToOfficeMode(page);
 
   const rio = page.getByRole("button", { name: "Rio와 대화하기" });
@@ -378,7 +378,7 @@ test("toggles a monitor and dismisses it from the room background", async ({
   page,
 }) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
   await switchToOfficeMode(page);
 
   const heading = page.getByRole("heading", { name: "OPERATIONS STATUS" });
@@ -399,7 +399,7 @@ test("toggles a monitor and dismisses it from the room background", async ({
 
 test("uses the alert scene when the bot is offline", async ({ page }) => {
   await mockConsole(page, { ...healthy, online: false, pid: null });
-  await page.goto("/");
+  await page.goto("/legacy");
   await switchToOfficeMode(page);
 
   await expect(page.locator(".command-deck")).toHaveAttribute(
@@ -416,7 +416,7 @@ test("guides an offline bot investigation from the action card", async ({
   page,
 }) => {
   await mockConsole(page, { ...healthy, online: false, pid: null });
-  await page.goto("/");
+  await page.goto("/legacy");
   await switchToOfficeMode(page);
 
   const card = page.getByText("BOT SERVICE OFFLINE").locator("..");
@@ -435,7 +435,7 @@ test("requires confirmation before stopping the bot", async ({ page }) => {
     id: "test-admin",
     role: "admin",
   });
-  await page.goto("/");
+  await page.goto("/legacy");
   await switchToOfficeMode(page);
 
   await selectFromControlPanel(page, /RIO CONTROL:/);
@@ -469,8 +469,11 @@ test("opens investigation panels through the keyboard command palette", async ({
     "Mobile browsers do not expose a Cmd/Ctrl keyboard shortcut.",
   );
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
 
+  await expect(
+    page.getByRole("button", { name: "명령 팔레트 열기" }),
+  ).toBeVisible();
   await page.keyboard.press("ControlOrMeta+K");
   const palette = page.getByRole("dialog", { name: "명령 팔레트" });
   await expect(palette).toBeVisible();
@@ -517,7 +520,7 @@ test("admin changes Discord Presence and sees the committed value after reload",
       await route.fulfill({ json: snapshot });
     }
   });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
   await expect(page.locator("#presence-status")).toHaveValue("dnd");
   await page.locator("#presence-status").selectOption("online");
@@ -542,7 +545,7 @@ test("presence form rejects whitespace and prevents viewer changes", async ({
   page,
 }) => {
   await mockConsole(page, healthy, { id: "123", role: "admin" });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
   await page.locator("#presence-text").fill("   ");
   await expect(
@@ -581,7 +584,7 @@ test("public Memory panel shows screening progress after reload and retains stal
         })
       : route.fulfill({ json: memoryEvaluationFixture() });
   });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
   const panel = page.getByRole("region", { name: "기억 평가 준비 상태" });
   await expect(panel).toContainText("38 / 50건");
@@ -641,7 +644,7 @@ test("admin inspects a selected memory candidate and logout clears its content",
     reads++;
     return route.fulfill({ json: detail });
   });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
   const open = page.getByRole("button", { name: "기억 후보 1 내용 보기" });
   await expect(open).toBeEnabled();
@@ -715,7 +718,7 @@ test("memory owner selection separates users and clears the previous body", asyn
   await page.route("**/api/memory/1?**", (route) =>
     route.fulfill({ json: detail }),
   );
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: /^MEMORY INDEX:/ }).click();
   const selector = page.getByRole("combobox", { name: "기억 소유자" });
   await expect(selector).toBeVisible();
@@ -773,7 +776,7 @@ test("shows five distinct recent failures and opens Live Events", async ({
       },
     ],
   });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: /OPERATIONS STATUS: ONLINE/ }).click();
   const errors = page.getByRole("region", { name: "최근 응답 오류" });
   await errors.scrollIntoViewIfNeeded();
@@ -813,7 +816,7 @@ test("public recovery retries status reads and keeps service controls disabled",
   page.on("request", (request) => {
     if (request.method() === "POST") writes++;
   });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: /OPERATIONS STATUS: ONLINE/ }).click();
   const recovery = page.getByRole("region", { name: "상태 조회 및 복구" });
   await expect(
@@ -860,7 +863,7 @@ test("admin confirms recovery restart and pending state survives panel changes",
     await gate;
     await route.fulfill({ json: { ok: true } });
   });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: /OPERATIONS STATUS: ONLINE/ }).click();
   const recovery = page.getByRole("region", { name: "상태 조회 및 복구" });
   await recovery.scrollIntoViewIfNeeded();
@@ -908,7 +911,7 @@ test("settings confirmations have unique accessible labels", async ({
   page,
 }, testInfo) => {
   await mockConsole(page, healthy, { id: "42", role: "admin" });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
   const labels = await page.locator("dialog").evaluateAll((dialogs) =>
     dialogs.map((dialog) => {
@@ -972,7 +975,7 @@ test("keyboard panel close restores the console navigation trigger", async ({
   page,
 }) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
   const trigger = page.getByRole("button", {
     name: /OPERATIONS STATUS: ONLINE/,
   });
@@ -990,7 +993,7 @@ test("keyboard panel close restores the console navigation trigger", async ({
 
 test("keyboard settings open and close preserve focus", async ({ page }) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
   const trigger = page.getByRole("button", { name: "SETTINGS", exact: true });
   await trigger.focus();
   await page.keyboard.press("Enter");
@@ -1008,7 +1011,7 @@ test("palette keyboard isolation and selection preserve the destination focus", 
   page,
 }) => {
   await mockConsole(page);
-  await page.goto("/");
+  await page.goto("/legacy");
   const trigger = page.getByRole("button", { name: "명령 팔레트 열기" });
   await trigger.focus();
   await page.keyboard.press("Enter");
@@ -1050,7 +1053,7 @@ test("keyboard focus indicators and reduced motion remain visible", async ({
 }) => {
   await mockConsole(page, healthy, { id: "42", role: "admin" });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto("/legacy");
   const trigger = page.getByRole("button", {
     name: /OPERATIONS STATUS: ONLINE/,
   });
@@ -1112,7 +1115,7 @@ test("normal and alert theme text tokens meet minimum contrast on fixed surfaces
   }[] = [];
   for (const theme of ["healthy", "alert"]) {
     await mockConsole(page, { ...healthy, online: theme === "healthy" });
-    await page.goto("/");
+    await page.goto("/legacy");
     const deck = page.locator(".command-deck");
     await expect(deck).toHaveAttribute("data-scene", theme);
     const tokens = await deck.evaluate((node) => {
@@ -1180,7 +1183,7 @@ test("confirmation returns focus to the panel while its source is disabled", asy
       });
     } else await route.fulfill({ json: presenceFixture() });
   });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: "SETTINGS", exact: true }).click();
   const settings = page.getByRole("complementary", {
     name: "RUNTIME SETTINGS",
@@ -1233,7 +1236,7 @@ test("retained Usage shows coverage limits and requests 90 days", async ({
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: /^USAGE ANALYTICS:/ }).click();
   const panel = page.getByRole("complementary", {
     name: "USAGE ANALYTICS",
@@ -1275,7 +1278,7 @@ test("Trace legacy tail is never displayed as a complete retained period", async
       },
     }),
   );
-  await page.goto("/");
+  await page.goto("/legacy");
   await page.getByRole("button", { name: /^TURN TRACES:/ }).click();
   const panel = page.getByRole("complementary", {
     name: "TURN TRACES",

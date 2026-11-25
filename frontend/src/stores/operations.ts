@@ -5,7 +5,6 @@ import type {
   PresenceConfiguration,
   PresenceSnapshot,
 } from "../domain/presence";
-import { deriveSituation } from "../domain/situation";
 import type {
   BotStatus,
   ControlAction,
@@ -22,7 +21,6 @@ import type {
   MemoryResponse,
   MemoryEvaluationResponse,
   PolicySetting,
-  SceneState,
   OperationRecord,
   PersistentOperationRecord,
   PostCheckState,
@@ -213,59 +211,6 @@ export const useOperationsStore = defineStore("operations", () => {
   const policySettingsError = ref<string | null>(null);
   const policySettingsLoading = ref(false);
   const policySettingPending = ref<string | null>(null);
-
-  const situation = computed(() =>
-    deriveSituation({
-      hasStatus: Boolean(status.value),
-      statusError: Boolean(statusError.value),
-      stale: stale.value,
-      online: status.value?.online ?? false,
-      eventsError: Boolean(status.value?.events_error),
-      deploymentFailed: deploymentFailed(deployments.value),
-      deploymentVerificationIncomplete: deploymentVerificationIncomplete(
-        deployments.value,
-      ),
-      deploymentsError: Boolean(deploymentsError.value),
-      latencyMs: status.value?.runtime?.latency_ms,
-      latencyWarningMs: LATENCY_WARNING_MS,
-    }),
-  );
-
-  const scene = computed<SceneState>(() => situation.value.scene);
-
-  const briefing = computed(() => {
-    if (control.value.state === "requesting") {
-      return {
-        message: "요청을 실행하고 있어.",
-        detail: `${control.value.action.toUpperCase()} / AWAITING RESPONSE`,
-      };
-    }
-    if (
-      control.value.state === "failure" ||
-      control.value.state === "success"
-    ) {
-      return {
-        message: control.value.message,
-        detail: `RIO CONTROL / ${control.value.state.toUpperCase()}`,
-      };
-    }
-    if (scene.value === "loading") {
-      return {
-        message: "시스템 상태를 확인하고 있습니다.",
-        detail: "AGENT LINK / AWAITING RESPONSE",
-      };
-    }
-    if (situation.value.level !== "healthy") {
-      return {
-        message: situation.value.reason,
-        detail: situation.value.detail,
-      };
-    }
-    return {
-      message: "문제없어. 시스템은 정상적으로 운영 중이야.",
-      detail: `GUILDS ${status.value?.runtime?.guild_count ?? "-"} / AGENT LINK ESTABLISHED`,
-    };
-  });
 
   const monitorStatuses = computed<Record<MonitorId, MonitorStatus>>(() => {
     const runtimeLatency = status.value?.runtime?.latency_ms;
@@ -818,9 +763,6 @@ export const useOperationsStore = defineStore("operations", () => {
     policySettingsError,
     policySettingsLoading,
     policySettingPending,
-    scene,
-    situation,
-    briefing,
     monitorStatuses,
     refreshStatus,
     refreshDeployments,

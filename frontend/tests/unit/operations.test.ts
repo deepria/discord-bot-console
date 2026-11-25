@@ -42,13 +42,12 @@ describe("operations store", () => {
     vi.mocked(api.getStatus).mockResolvedValue(healthyStatus);
     const store = useOperationsStore();
 
-    expect(store.scene).toBe("loading");
+    expect(store.monitorStatuses.system.summary).toBe("UNAVAILABLE");
     await store.refreshStatus();
 
-    expect(store.scene).toBe("healthy");
     expect(store.monitorStatuses.system.summary).toBe("ONLINE");
     expect(store.status?.runtime?.model).toBe("gpt-test");
-    expect(store.situation.level).toBe("healthy");
+    expect(store.monitorStatuses.system.severity).toBe("normal");
   });
 
   it("retains the last good response and marks it stale", async () => {
@@ -62,9 +61,8 @@ describe("operations store", () => {
 
     expect(store.status?.pid).toBe(101);
     expect(store.stale).toBe(true);
-    expect(store.scene).toBe("alert");
+    expect(store.monitorStatuses.system.summary).toBe("STALE");
     expect(store.monitorStatuses.link.severity).toBe("alert");
-    expect(store.situation.recommendedMonitor).toBe("link");
   });
 
   it("counts only events received after initialization", async () => {
